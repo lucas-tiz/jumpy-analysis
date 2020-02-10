@@ -1,0 +1,13 @@
+total elapsed time: 11:05:29 h:m:s
+velocity: 3.087 m/s
+optimal params:
+    k_tendon_hip:  1000000.00
+    k_tendon_knee:  1000000.00
+    rad_hip:  4.80
+    rad_knee:  2.30
+    slope_hip:  1.80
+    slope_knee:  0.80
+    t_hip:  0.31
+    t_knee:  0.17
+
+optimized jump height: 0.452

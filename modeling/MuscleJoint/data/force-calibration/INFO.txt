@@ -1,0 +1,4 @@
+Muscle details
+- clean_cut 1.25D mesh
+- crimp over tube sleeve
+- up to 50 psi (345kPa)

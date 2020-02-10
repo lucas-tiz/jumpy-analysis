@@ -1,0 +1,12 @@
+total elapsed time: 07:28:33 h:m:s
+velocity: 4.271 m/s
+optimal params:
+    knee delay:  -0.23
+    tendon knee: 1000000.00
+    tendon hip:  1000000.00
+    radius knee: 0.80
+    radius hip:  4.30
+    slope knee:  1.60
+    slope hip:   2.20
+
+optimized jump height: 0.884
