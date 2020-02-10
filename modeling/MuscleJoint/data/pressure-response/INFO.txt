@@ -1,0 +1,9 @@
+Muscle details
+- clean_cut 1.25 D mesh
+- crimp over tube sleeve
+- up to 50 psi (345kPa)
+- no slack in muscle
+
+Tubing details
+- 0.19 in ID
+- quick-connect fittings

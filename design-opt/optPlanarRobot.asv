@@ -88,9 +88,9 @@ hexapod.mu = 0.99; % 0.9
 % animation
 animation = 1;
 anim_delay = 0.00;
-vid_export = 0;       % animation export on
-vid_path = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Hexapod\analysis\anim'; %TODO: relative path?
-vid_file = 'anim_export_test'; % animation video file name
+vid_export = 1;       % animation export on
+vid_path = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Hexapod\analysis\anim'; %TODO
+vid_file = 'jump_vert_fromStand'; % animation video file name
 
 % save info
 global f_save
@@ -521,7 +521,7 @@ legend('right foot', 'left foot')
 sim_param.dt = 1e-3;
 if animation == 1
     if vid_export == 1
-        vid = VideoWriter(fullfile(vid_path,vid_file),'MPEG-4');
+        vid = VideoWriter(fullfile(',vid_file],'MPEG-4');
         vid.Quality = 50;
         vid.FrameRate = 60;
         open(vid);

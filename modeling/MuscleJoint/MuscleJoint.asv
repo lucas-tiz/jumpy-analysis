@@ -53,9 +53,8 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         
         function filename_cam_data = create_cam_filename(obj, cam_param)
             % create file name for cam data from cam parameters
-            filename_cam_data = fullfile(obj.repo_path, 'modeling', 'cam-data',... % cam data file name
-                ['cam_data_',...
-                num2str(cam_param.d), 'd_',...
+            filename_cam_data = fullfile(obj.repo_folder, 'modeling', 'cam-data',... % cam data file name
+                [num2str(cam_param.d), 'd_',...
                 num2str(rad2deg(cam_param.phi_range(1))),'to',...
                 num2str(rad2deg(cam_param.phi_range(2))),'phi_',...
                 num2str(rad2deg(cam_param.beta_vec(1))),'to',...
@@ -91,7 +90,6 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
 %                 file_pres_response = 'Specimen_RawData_1.csv';
                 
                 pres_response_path = fullfile(obj.repo_path,...
-                    'modeling', 'MuscleJoint', 'data', 'pressure-response',...
                     'response-clean_cut_1p25D_0p19inID_quickconnect_noslack-raw_data.csv');
                 
                 [t_vec,f_vec,~,f_steady] = obj.get_step_data(pres_response_path,...
@@ -202,21 +200,21 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         end
             
         
-        function update_cam_data(obj, sweep_arr)
+        function update_cam_data(obj, sweep_vec)
             % calculate effective moment arm for all cam geometries
             % not previously saved; sweep_vec = [radius0, slope]
             tic
             fprintf('calculating cam data...\n')
             
             obj.load_cam_data(); % re-load cam data
-            s = size(sweep_arr); % get sweep array size
-            n_sweep = s(1); % get sweep array length (rows)
+            s = size(sweep_vec); % get sweep vector size
+            n_sweep = s(1); % get sweep vector leg
             beta_vec = obj.cam_param.beta_vec;
             n_beta = length(beta_vec);
             tic
             for idx_sweep = 1:n_sweep % loop over sweep vector
-                cam_rad0_tmp = sweep_arr(idx_sweep,1); % (cm) cam radius at zero degrees
-                cam_slope_tmp = sweep_arr(idx_sweep,2); % (cm/rad) cam profile radius slope
+                cam_rad0_tmp = sweep_vec(idx_sweep,1); % (cm) cam radius at zero degrees
+                cam_slope_tmp = sweep_vec(idx_sweep,2); % (cm/rad) cam profile radius slope
 
                 key = [num2str(cam_rad0_tmp),',',num2str(cam_slope_tmp)]; % map key
                 if ~obj.cam_map.isKey(key) % if key doesn't already exist, calculate data
@@ -304,8 +302,7 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
 %                     'tube_sleeve_345kpa.mat'];
                 
                 surf_fit_path = fullfile(obj.repo_path,...
-                    'modeling', 'MuscleJoint', 'data', 'force-calibration',...
-                    'surface_fit-clean_cut_1p25D_crimp_over_tube_sleeve_345kpa.mat');
+                    'response-clean_cut_1p25D_0p19inID_quickconnect_noslack-raw_data.csv');
                 
                 sf = load(surf_fit_path, 'sf'); 
                 obj.force_sf = sf.('sf');
