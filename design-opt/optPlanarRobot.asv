@@ -9,7 +9,7 @@ repo_path = current_path(1:(idx_repo-1 + length(repo_folder)));
 
 addpath(fullfile(repo_path, 'modeling'));
 addpath(fullfile(repo_path, 'modeling', 'MuscleJoint'));
-addpath(genpath( 'C:\Program Files\MATLAB\spatial_v2' )); %TODO: make this relative?
+% addpath(genpath( 'C:\Program Files\MATLAB\spatial_v2' )); %TODO: make this relative?
 
 global t_comp0
 t_comp0 = now;
@@ -88,9 +88,9 @@ hexapod.mu = 0.99; % 0.9
 % animation
 animation = 1;
 anim_delay = 0.00;
-vid_export = 1;       % animation export on
-vid_path = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Hexapod\analysis\anim'; %TODO
-vid_file = 'jump_vert_fromStand'; % animation video file name
+vid_export = 0;       % animation export on
+vid_path = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Hexapod\analysis\anim'; %TODO: relative path?
+vid_file = 'anim_export_test'; % animation video file name
 
 % save info
 global f_save
@@ -319,6 +319,64 @@ grf.l = [f_arr(:,2), f_arr(:,5)-f_arr(:,6)]; % left foot GRFs [normal (x-dir), t
 %         'h_jump')
 % end
 
+%% Export data
+
+thetadd = diff(x_arr(:,11:14),1,1)/sim_param.dt;
+thetadd = [thetadd; zeros(1,4)];
+
+% f123 = figure(123); clf
+% hold on
+% grid on
+% plot(t_vec, thetadd(:,1))
+% plot(t_vec, thetadd(:,2))
+% plot(t_vec, thetadd(:,3))
+% plot(t_vec, thetadd(:,4))
+
+
+% [time (s), 
+% pres1: right knee(kPa), pres2: right hip (kPa), pres3: left hip (kPa), pres4: left knee(kPa)
+% cont1: right knee (cm), cont2: right hip (cm), cont3: left hip(cm), cont4: left knee (cm)
+% elong1: right knee (cm), elong2: right hip (cm), elong3: left hip (cm), elong4: left knee (cm)
+% force1: right knee (N), force2: right hip (N), force3: left hip (N), force4: left knee (N)
+% tau2: right knee (Nm), tau3: right hip (Nm), tau4: left hip (Nm), tau5: left knee (Nm)
+% theta2: right knee (rad), theta3: right hip (rad), theta4: left hip (rad), theta5: left knee (rad)
+% theta2d: right knee (rad/s), theta3d: right hip (rad/s), theta4d: left hip (rad/s), theta5d: left knee (rad/s)
+% theta2dd: right knee (rad/s^2), theta3dd: right hip (rad/s^2), theta4dd: left hip (rad/s^2), theta5dd: left knee (rad/s^2)
+
+header = ['time, pres_kr, pres_hr, pres_, pres4, cont1, cont2, cont3, cont4, ',... 
+    'elong1, elong2, elong3, elong4, force1, force2, force3
+
+data_export = [t_vec,... % time
+    j_state_arr{1}.muscle_pressure, j_state_arr{2}.muscle_pressure, j_state_arr{3}.muscle_pressure, j_state_arr{4}.muscle_pressure,... % muscle pressures
+    j_state_arr{1}.muscle_contract, j_state_arr{2}.muscle_contract, j_state_arr{3}.muscle_contract, j_state_arr{4}.muscle_contract,... % muscle contraction lengths
+    j_state_arr{1}.tendon_stretch, j_state_arr{2}.tendon_stretch, j_state_arr{3}.tendon_stretch, j_state_arr{4}.tendon_stretch,... % tendon elongations
+    j_state_arr{1}.mtu_force, j_state_arr{2}.mtu_force, j_state_arr{3}.mtu_force, j_state_arr{4}.mtu_force,... % muscle forces
+    j_state_arr{1}.torque, j_state_arr{2}.torque, j_state_arr{3}.torque, j_state_arr{4}.torque,... % joint torques
+    x_arr(:,4), x_arr(:,5), x_arr(:,6), x_arr(:,7),... % joint angles
+    x_arr(:,11), x_arr(:,12), x_arr(:,13), x_arr(:,14),... % joint angular velocities
+    thetadd(:,1), thetadd(:,2), thetadd(:,3), thetadd(:,4)]; % joint angular accelerations
+    
+
+
+file_export = 'jump_data';
+
+
+    
+fid = fopen(fullfile('sim-data', [file_export, '.csv']), 'w'); 
+
+
+
+fprintf(fid,'%s\n',textHeader)
+fclose(fid)
+
+
+%write data to end of file
+dlmwrite('yourfile.csv',yourdata,'-append');
+    
+
+    
+
+
 
 %% Plots
 co = get(0, 'DefaultAxesColorOrder');
@@ -521,7 +579,7 @@ legend('right foot', 'left foot')
 sim_param.dt = 1e-3;
 if animation == 1
     if vid_export == 1
-        vid = VideoWriter(fullfile(',vid_file],'MPEG-4');
+        vid = VideoWriter(fullfile(vid_path,vid_file),'MPEG-4');
         vid.Quality = 50;
         vid.FrameRate = 60;
         open(vid);

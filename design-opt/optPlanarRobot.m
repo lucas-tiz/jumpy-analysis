@@ -9,7 +9,7 @@ repo_path = current_path(1:(idx_repo-1 + length(repo_folder)));
 
 addpath(fullfile(repo_path, 'modeling'));
 addpath(fullfile(repo_path, 'modeling', 'MuscleJoint'));
-addpath(genpath( 'C:\Program Files\MATLAB\spatial_v2' )); %TODO: make this relative?
+% addpath(genpath( 'C:\Program Files\MATLAB\spatial_v2' )); %TODO: make this relative?
 
 global t_comp0
 t_comp0 = now;
@@ -48,12 +48,12 @@ opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 % opt_param.t_hip = 0.0:0.1:0.5;
 % opt_type = 3;
 
-opt_param.rad_knee = 3; %3.40;
-opt_param.rad_hip = 3; %4.80;
+opt_param.rad_knee = 2; %3.40;
+opt_param.rad_hip = 2; %4.80;
 opt_param.slope_knee = 0;% -0.90;
 opt_param.slope_hip = 0; %-0.60;
-opt_param.k_tendon_knee = 1000; %61.65;
-opt_param.k_tendon_hip = 1000; %37.53;
+opt_param.k_tendon_knee = 50; %61.65;
+opt_param.k_tendon_hip = 50; %37.53;
 opt_param.t_knee = 0; %0.27;
 opt_param.t_hip = 0; %0.29;
 opt_type = 1;
@@ -67,23 +67,23 @@ sim_param.dt = 1e-3; % delta t
 sim_param.liftoff_stop = 1; % stop simulation at liftoff 
 
 % initial config.
-hexapod.wb = 0.55; % (m) hexapod base width (food width apart)
+hexapod.wb = 0.55; % (m) hexapod base width (food width apart) TODO: needed?
 % y0 = deg2rad([20; 20; 140]); % [theta3, theta4, theta5] [60, 60, 60]
 % y0 = deg2rad([-30 -30 240]);
 
 % control parameters [knee_r, hip_r, hip_l, knee_l]
 hexapod.p_max = 241.3; % (kPa)
 hexapod.t_musc_activate = [0.0, 0.0, 0.0, 0.0]; % muscle activation timings (set via sweep)
-hexapod.joint_damp = [1.5, 2.0, 2.0, 1.5]*0.4;
-% hexapod.joint_damp = [0.0, 0.0, 0.0, 0.0]*0.4;
+% hexapod.joint_damp = [1.5, 2.0, 2.0, 1.5]*0.4;
+hexapod.joint_damp = [0.0, 0.0, 0.0, 0.0];
 hexapod.joint_damp_lims = deg2rad([0, 90, 90, 0]);
-hexapod.joint_stiff = [1, 3, 3, 1]*5; % (Nm/rad)
-% hexapod.joint_stiff = [1, 1, 1, 1]; % (Nm/rad)
+% hexapod.joint_stiff = [1, 3, 3, 1]*5; % (Nm/rad)
+hexapod.joint_stiff = [0, 0, 0, 0]; % (Nm/rad)
 hexapod.joint_stiff_lims = deg2rad([10,  80,  80,  10;
                                     -90, 180, 180, -90]);
 % hexapod.joint_stiff_lims = deg2rad([10,  70,  70,  10;
 %                                     -90, 180, 180, -90]);
-hexapod.mu = 0.99; % 0.9
+hexapod.mu = 0.999; % 0.9
 
 % animation
 animation = 1;
@@ -103,8 +103,10 @@ save_data = 0; %TODO
 hexapod = buildPlanarRobot(hexapod); % build planar hexapod robot
 
 %TODO: how to determine initial pose
-x0 = [0, 0, deg2rad(-70), deg2rad(140), deg2rad(20), deg2rad(20), deg2rad(140)...
-      0, 0, deg2rad(0),   deg2rad(0),   deg2rad(0),  deg2rad(0),  deg2rad(0)];
+% x0 = [0, 0, deg2rad(-70), deg2rad(140), deg2rad(20), deg2rad(20), deg2rad(140)...
+%       0, 0, deg2rad(0),   deg2rad(0),   deg2rad(0),  deg2rad(0),  deg2rad(0)];
+x0 = [0, 0, deg2rad(-45), deg2rad(90), deg2rad(45), deg2rad(45), deg2rad(90)...
+      0, 0, deg2rad(0),   deg2rad(0),   deg2rad(0),  deg2rad(0),  deg2rad(0)];  
 % x0 = [0, 0, deg2rad(-5), deg2rad(10), deg2rad(85), deg2rad(85), deg2rad(10)...
 %       0, 0, deg2rad(0),   deg2rad(0),   deg2rad(0),  deg2rad(0),  deg2rad(0)];
 % x0 = [0, 0, deg2rad(-30), deg2rad(140), deg2rad(-30), deg2rad(-30), deg2rad(140)...
@@ -294,7 +296,7 @@ end
 %% Data
 % simulate optimal config
 fprintf('\nsimulating optimal config\n')
-sim_param.t_sim = 1.5;
+sim_param.t_sim = 1;
 sim_param.dt = 5e-4;
 sim_param.liftoff_stop = 0;
 hexapod = update_hexapod_params(hexapod, param_vec_best, opt_param);
@@ -318,6 +320,65 @@ grf.l = [f_arr(:,2), f_arr(:,5)-f_arr(:,6)]; % left foot GRFs [normal (x-dir), t
 %         'j_state_arr', 'react_arr', 'info_aerial', 'y_torso', 't_jump',...
 %         'h_jump')
 % end
+
+%% Export data
+
+thetadd = diff(x_arr(:,11:14),1,1)/sim_param.dt;
+thetadd = [thetadd; zeros(1,4)];
+
+f123 = figure(123); clf
+hold on
+grid on
+plot(t_vec, thetadd(:,1))
+plot(t_vec, thetadd(:,2))
+plot(t_vec, thetadd(:,3))
+plot(t_vec, thetadd(:,4))
+
+
+% [time (s), 
+% pres1: right knee(kPa), pres2: right hip (kPa), pres3: left hip (kPa), pres4: left knee(kPa)
+% cont1: right knee (cm), cont2: right hip (cm), cont3: left hip(cm), cont4: left knee (cm)
+% elong1: right knee (cm), elong2: right hip (cm), elong3: left hip (cm), elong4: left knee (cm)
+% force1: right knee (N), force2: right hip (N), force3: left hip (N), force4: left knee (N)
+% tau2: right knee (Nm), tau3: right hip (Nm), tau4: left hip (Nm), tau5: left knee (Nm)
+% theta2: right knee (rad), theta3: right hip (rad), theta4: left hip (rad), theta5: left knee (rad)
+% theta2d: right knee (rad/s), theta3d: right hip (rad/s), theta4d: left hip (rad/s), theta5d: left knee (rad/s)
+% theta2dd: right knee (rad/s^2), theta3dd: right hip (rad/s^2), theta4dd: left hip (rad/s^2), theta5dd: left knee (rad/s^2)
+
+header = ['time, ',...
+    'pres-kr, pres-hr, pres-hl, pres-kl, ',...
+    'cont-kr, cont-hr, cont-hl, cont-kl, ',... 
+    'elong-kr, elong-hr, elong-hl, elong-kl, ',...
+    'force-kr, force-hr, force-hl, force-kl, ',...
+    'tau-kr, tau-hr, tau-hl, tau-kl, ',...
+    'theta-kr, theta-hr, theta-hl, theta-kl ',...
+    'thetad-kr, thetad-hr, thetad-hl, thetad-kl ',...
+    'thetadd-kr, thetadd-hr, thetadd-hl, thetadd-kl'];
+
+data_export = [t_vec',... % time
+    j_state_arr{1}.muscle_pressure, j_state_arr{2}.muscle_pressure, j_state_arr{3}.muscle_pressure, j_state_arr{4}.muscle_pressure,... % muscle pressures
+    j_state_arr{1}.muscle_contract, j_state_arr{2}.muscle_contract, j_state_arr{3}.muscle_contract, j_state_arr{4}.muscle_contract,... % muscle contraction lengths
+    j_state_arr{1}.tendon_stretch, j_state_arr{2}.tendon_stretch, j_state_arr{3}.tendon_stretch, j_state_arr{4}.tendon_stretch,... % tendon elongations
+    j_state_arr{1}.mtu_force, j_state_arr{2}.mtu_force, j_state_arr{3}.mtu_force, j_state_arr{4}.mtu_force,... % muscle forces
+    j_state_arr{1}.torque, j_state_arr{2}.torque, j_state_arr{3}.torque, j_state_arr{4}.torque,... % joint torques
+    x_arr(:,4), x_arr(:,5), x_arr(:,6), x_arr(:,7),... % joint angles
+    x_arr(:,11), x_arr(:,12), x_arr(:,13), x_arr(:,14),... % joint angular velocities
+    thetadd(:,1), thetadd(:,2), thetadd(:,3), thetadd(:,4)]; % joint angular accelerations
+    
+
+
+file_export = 'jump_data';
+
+
+file_export_path = fullfile(repo_path,'modeling','sim-data',[file_export, '.csv']);    
+fid = fopen(file_export_path, 'w'); 
+fprintf(fid,'%s\n',header);
+fclose(fid);
+dlmwrite(file_export_path, data_export, '-append');
+    
+
+    
+
 
 
 %% Plots
