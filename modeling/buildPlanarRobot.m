@@ -28,7 +28,7 @@ robot.J(5) = 1/12*robot.m(5)*(3*r_cyl^2 + robot.l(5)^2); % (kg/m^2)
 robot.tau = [0; 0; 0; 0; 0]; % actual robot joints 1-5 (1 is unactuated)
 
 
-%% Model
+%% Spatial_v2 Model
 % parameters
 robot.NB = 5+2; % number of bodies (+2 for x-,y- prismatic joints at right foot)
 robot.jtype = {'px','py','r','r','r','r','r'};
@@ -56,7 +56,7 @@ for idx_b = 3:robot.NB % idx_b = index of body
     robot.I{idx_b} = mcI(mass, CoM, Icm);    
 end
 
-% build model appearance
+% build model appearance TODO: is this needed?
 robot.appearance.base = {'box', [-0.2 -0.3 -0.2; 0.2 0.3 -0.06]};
 robot.appearance.body = {{}, {}};
 

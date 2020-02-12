@@ -18,9 +18,7 @@ t_comp0 = now;
 % import config
 % pass config to build robot function
 % keep config and robot separate objects
-% edit functions that use config & robot structure fields
 % remove 'planar' from function names?
-% update YAMLmatlab on PC
 
 config_file = fullfile(repo_path,'modeling','robot_config.yaml');
 config = ReadYaml(config_file);
