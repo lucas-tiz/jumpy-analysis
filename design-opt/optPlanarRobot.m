@@ -22,8 +22,8 @@ t_comp0 = now;
 % remove 'planar' from function names?
 % update YAMLmatlab on PC
 
-config_file = fullfile(repo_path,'modeling','robot_config.yaml');
-config = ReadYaml(config_file);
+% config_file = fullfile(repo_path,'modeling','robot_config.yaml');
+% config = ReadYaml(config_file);
 
 
 %% Parameters
@@ -59,14 +59,14 @@ opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 % opt_param.t_hip = 0.0:0.1:0.5;
 % opt_type = 3;
 
-opt_param.rad_knee = 3.40;
-opt_param.rad_hip = 4.80;
-opt_param.slope_knee = -0.90;
-opt_param.slope_hip = -0.60;
-opt_param.k_tendon_knee = 61.65;
-opt_param.k_tendon_hip = 37.53;
-opt_param.t_knee = 0.27;
-opt_param.t_hip = 0.29;
+opt_param.rad_knee = 2; %3.40;
+opt_param.rad_hip = 2; %4.80;
+opt_param.slope_knee = 0; %-0.90;
+opt_param.slope_hip = 0; %-0.60;
+opt_param.k_tendon_knee = 50; %61.65;
+opt_param.k_tendon_hip = 50; %37.53;
+opt_param.t_knee = 0; %0.27;
+opt_param.t_hip = 0; %0.29;
 opt_type = 1;
 
 global opt_fieldnames
@@ -88,8 +88,8 @@ hexapod.t_musc_activate = [0.0, 0.0, 0.0, 0.0]; % muscle activation timings (set
 % hexapod.joint_damp = [1.5, 2.0, 2.0, 1.5]*0.4;
 hexapod.joint_damp = [0.0, 0.0, 0.0, 0.0];
 hexapod.joint_damp_lims = deg2rad([0, 90, 90, 0]);
-hexapod.joint_stiff = [1, 3, 3, 1]*5; % (Nm/rad)
-% hexapod.joint_stiff = [0, 0, 0, 0]; % (Nm/rad)
+% hexapod.joint_stiff = [1, 3, 3, 1]*5; % (Nm/rad)
+hexapod.joint_stiff = [0, 0, 0, 0]; % (Nm/rad)
 hexapod.joint_stiff_lims = deg2rad([10,  80,  80,  10]);
 % hexapod.joint_stiff_lims = deg2rad([10,  70,  70,  10;
 hexapod.mu = 0.999; % 0.9
