@@ -110,7 +110,7 @@ if forceOptSens3D.plot == 1
     hold on
     grid on
     xlim([-4,12]) %xlim([0,8.0])
-    ylim([-50,400])
+%     ylim([0,300])
     zlim([0 700]) %zlim([0 700])
     set(f7, 'Units', 'Normalized');
     xlab = xlabel('Contraction (cm)');
@@ -192,16 +192,7 @@ if forceOptSens3D.plot == 1
     
     % fit max contraction border line
     pres = [0; testArr(1,:)']*6.89476; % (kPa)
-    cont0 = [0; cont_final];
-    cont = zeros(size(pres));
-    
-    for i = 1:length(pres)
-        options = optimset('Display','iter');
-        cont(i) = fminsearch(@(c) surfaceBoundaryObjFun(c, pres(i), sf), cont0(i), options);
-    end
-%     plot3(cont,pres, zeros(size(cont)), 'Marker', '.', 'LineStyle', 'none',...
-%         'MarkerSize', 30, 'Color', 'r')
-    
+    cont = [0; cont_final];
 %     max_cont_fit = fit(pres, cont, 'poly3');
 
     fo = fitoptions('Method','NonlinearLeastSquares',...
@@ -211,13 +202,8 @@ if forceOptSens3D.plot == 1
     ft = fittype('a + b*log(x+c) + d*x + e*x^2', 'options',fo);
     [cf, cgof] = fit(pres, cont, ft)
     
-    cf_mod = cf;
-    cf_mod.a = cf.a - 0.5;
-    
     pres_eval = 0:1:pres(end);
-%     plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
-    plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
-        'Color', 'r')
+    plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
 
 
     
@@ -441,7 +427,7 @@ k_elong = 500; % (N/cm)
 
 cont_lims = [-1,8]; % (cm)
 cont_vec = (-1:0.5:8)'; % (cm)
-pres_vec = ([-5, 0, testArr(1,:), 60]*6.89476)'; % (kPa)
+pres_vec = ([-5, 0, testArr(1,:)]*6.89476)'; % (kPa)
 
 [X,Y] = meshgrid(cont_vec, pres_vec);
 Z = zeros(size(X)); % (N) force
@@ -473,7 +459,10 @@ for i = (1:length(dataCellArr))
 end
 
 % add large pressure data (constant)
-dataCell{13} = dataCell{12};
+cont = 0:1:4;
+pres = pres_vec(2)*ones(size(cont));
+force = zeros(size(cont));
+dataCell{2} = [cont, pres, force];
 
 % add negative contraction and large contraction data
 dataArr = [];
@@ -483,8 +472,8 @@ for i = 1:length(dataCell)
     pres = dataCell{i}(:,2);
     force = dataCell{i}(:,3);
     
-    cont_pre = cont_vec(cont_vec < 0);
-    cont_post = cont_vec(cont_vec > cont(end));
+    cont_pre = cont_grid(cont_grid < 0);
+    cont_post = cont_grid(cont_grid > cont(end));
     
     cont = [cont_pre; cont; cont_post];
     force = [force(1) - k_elong*cont_pre; force; zeros(size(cont_post))];
@@ -499,13 +488,12 @@ end
 
 
 
-save('force_makima_interp_data.mat', 'X','Y','Z')
 
 
 % interp2 surface
-[Xint,Yint] = meshgrid(-1:0.1:12, 0:10:500);
+[Xint,Yint] = meshgrid(-4:0.1:12, -100:10:600);
 
-Zint = interp2(X, Y, Z, Xint, Yint, 'makima');
+Zint = interp2(X, Y, Z, Xint, Yint, 'makima', 0);
 
 
 f8 = figure(8); clf
@@ -514,15 +502,14 @@ grid on
 xlabel('Contraction (cm)')
 ylabel('Pressure (psi)')
 zlabel('Force (N)')
-xlim([-2,12]) %xlim([0,8.0])
-ylim([0 500])
-zlim([0 1000]) %zlim([0 700])
+% xlim([-4,12]) %xlim([0,8.0])
+% zlim([-100 700]) %zlim([0 700])
 view(135,35) % (135, 45)
 % surf(X,Y,Z)
 % scatter3(Xs,Ys,Zs)
 % scatter3(dataArr(:,1),dataArr(:,2),dataArr(:,3))
 
-scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3), 80, '.r')
+scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3))
 surf(Xint,Yint,Zint)
 
 
@@ -671,9 +658,7 @@ function cost = surfFitObjFun(p, contract,pres,force)
 end
 
 
-function cost = surfaceBoundaryObjFun(c, pressure, sf)
-    cost = (sf(c,pressure))^2;
-end
+
 
 
 
