@@ -10,7 +10,7 @@ t1 = 1;
 t2 = 1.5;
 t3 = 2;
 
-alpha_log = 50; % 800
+alpha_log = 500; % 800
 p_coeffs = [1 1 1 0]*10; % 17
 alpha_exp = 6;
 
@@ -102,7 +102,7 @@ beq = zeros(4,1);
 
 % boundary conditions
 Aeq(1,1) = 1; beq(1) = 0; % y0 = 0
-Aeq(2,n_knot) = 1; beq(2) = 1; % yf = 1
+Aeq(2,n_knot) = 1; beq(2) = 5; % yf = 1
 Aeq(3, n_knot+1) = 1; beq(3) = 0; % vy0 = 0
 Aeq(4, n_knot+n_knot) = 1; beq(4) = 0; % vyf = 0
 
@@ -272,7 +272,7 @@ function [c,ceq] = constFun(x, n_seg, n_knot)
     
     
     % control constraints (pressure)
-    alpha_log = 100;
+    alpha_log = 500;
     p_coeffs = [1 1 1 0]*17;
     alpha_exp = 4;
     
