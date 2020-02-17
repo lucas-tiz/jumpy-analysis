@@ -1,21 +1,24 @@
 classdef MuscleJoint < matlab.mixin.Copyable %handle
     % revolute joint actuated by pneumatic muscle
     properties        
-        cam_rad0 % initial cam radius
-        cam_slope % cam profile slope
-        cam_theta_range % joint angle (theta) range corresponding to cam angle (beta) range
-        k_tendon % tendon stiffness
-        
+        joint_param % joint-specific parameters
         cam_param % cam parameters for calculating cam_map data
-        cam_map % moment arm and linear displacement data
-        
-        repo_folder = 'jumpy-analysis';
-        repo_path
+        cam_map % mome
     end
     
-    properties (Access = private)
-%         user % NOTE: change this for use on different computers
+    properties (SetAccess = private)
+        % read-only properties
+        repo_folder = 'jumpy-analysis';
+        repo_path
 
+%         joint_param % joint-specific parameters
+%         cam_param % cam parameters for calculating cam_map data
+%         cam_map % moment arm and linear displacement data
+    end
+    
+    
+    properties (Access = private)
+        % private properties
         pressure_curvefit % time-pressure curvefit (transient response)
         step_resp_f_steady % steady-state force for pressure step response
         force_sf % pressure-length-force surface fit
@@ -24,42 +27,52 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
     
     %%
     methods
-        function obj = MuscleJoint(cam_rad0, cam_slope, cam_theta_range,...
-                k_tendon, cam_param)%, user)
-            % set public properties
-            obj.cam_rad0 = cam_rad0;
-            obj.cam_slope = cam_slope;
-            obj.cam_theta_range = cam_theta_range;
-            obj.k_tendon = k_tendon;
-            obj.repo_path = obj.get_repo_path();
+        function obj = MuscleJoint(joint_param, cam_param)
+            % Constructor
+            obj.repo_path = obj.get_repo_path(); % get path to repository
             
-            % set private properties
-            obj.cam_param = cam_param;
-            obj.cam_param.filename = obj.create_cam_filename(cam_param); % construct cam file name from parameters
-%             obj.user = user;
+
             
-            % initialize data
+            % set up object joint-specific parameters & convert angles
+            obj.set_joint_param(joint_param);
+%             obj.joint_param.rad0 = joint_param.rad0;
+%             obj.joint_param.slope = joint_param.slope;
+%             obj.joint_param.theta_range = deg2rad(joint_param.theta_range);
+%             obj.joint_param.k_tendon = joint_param.k_tendon;
+            
+            % set up object cam parameters & convert angles
+            obj.set_cam_param(cam_param);
+%             obj.cam_param.d = cam_param.d;
+%             obj.cam_param.phi_range = deg2rad(cam_param.phi_range);
+%             obj.cam_param.beta_range = deg2rad(cam_param.beta_range);
+%             obj.cam_param.beta_inc = deg2rad(cam_param.beta_inc);
+%             obj.cam_param.beta_vec = deg2rad(cam_param.beta_range(1):...
+%                 cam_param.beta_inc:cam_param.beta_range(2));
+            
+            % create/load cam map if it exists
+%             obj.cam_param.filename = obj.create_cam_filename(); % construct cam file name from parameters
             obj.cam_map = containers.Map; % initialize to map
             obj.load_cam_data(); % load cam data if exists
         end
         
         
         function repo_path = get_repo_path(obj)
-            current_path = pwd;
-            idx_repo = strfind(pwd, obj.repo_folder);
-            repo_path = current_path(1:(idx_repo-1 + length(obj.repo_folder)));
+            class_path = which('MuscleJoint');
+            idx_repo = strfind(class_path, obj.repo_folder);
+            repo_path = class_path(1:(idx_repo-1 + length(obj.repo_folder)));
         end
         
         
-        function filename_cam_data = create_cam_filename(obj, cam_param)
-            % create file name for cam data from cam parameters
-            filename_cam_data = fullfile(obj.repo_path, 'modeling', 'cam-data',... % cam data file name
+        function filename_cam_data = create_cam_filename(obj)
+            % create file name for cam data from cam parameters            
+            filename_cam_data = fullfile(obj.repo_path, 'modeling',... % cam data file name
+                '@MuscleJoint', 'cam-data',... 
                 ['cam_data_',...
-                num2str(cam_param.d), 'd_',...
-                num2str(rad2deg(cam_param.phi_range(1))),'to',...
-                num2str(rad2deg(cam_param.phi_range(2))),'phi_',...
-                num2str(rad2deg(cam_param.beta_vec(1))),'to',...
-                num2str(rad2deg(cam_param.beta_vec(end))),'beta',...
+                num2str(obj.cam_param.d), 'd_',...
+                num2str(rad2deg(obj.cam_param.phi_range(1))),'to',...
+                num2str(rad2deg(obj.cam_param.phi_range(2))),'phi_',...
+                num2str(rad2deg(obj.cam_param.beta_vec(1))),'to',...
+                num2str(rad2deg(obj.cam_param.beta_vec(end))),'beta',...
                 '.mat']);
         end
         
@@ -83,17 +96,10 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             % estimate transient pressure response during muscle inflation
             % using Instron force response curve
             if isempty(obj.pressure_curvefit) % create pressure-time curve fit
-%                 folder_pres_response = ['C:\Users\',obj.user,'\Dropbox (GaTech)\',...
-%                     'Research\Hexapod\testing\bandwidth characterization\',...
-%                     'clean_cut_1p25D_0p19inID_quickconnect_noslack.is_tens',...
-%                     '_RawData\instron data\bandwidth_clean_cut_1p25D_0p19',...
-%                     'inID_quickconnect_noslack.is_tens_RawData'];
-%                 file_pres_response = 'Specimen_RawData_1.csv';
-                
                 pres_response_path = fullfile(obj.repo_path,...
-                    'modeling', 'MuscleJoint', 'data', 'pressure-response',...
+                    'modeling', '@MuscleJoint', 'muscle-data', 'pressure-response',...
                     'response-clean_cut_1p25D_0p19inID_quickconnect_noslack-raw_data.csv');
-                
+              
                 [t_vec,f_vec,~,f_steady] = obj.get_step_data(pres_response_path,...
                     [1 4], 0.1, 1.5);
                 obj.step_resp_f_steady = f_steady;                
@@ -116,14 +122,14 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         %% cam/joint geometry stuff
         function joint_angle_sign = get_joint_angle_sign(obj)
             % determine sign of joint angle relative to cam parameterization angle
-            joint_angle_sign = sign(obj.cam_theta_range(2)-...
-                obj.cam_theta_range(1));
+            joint_angle_sign = sign(obj.joint_param.theta_range(2)-...
+                obj.joint_param.theta_range(1));
         end
        
        
         function cam_angle = convert_joint_angle_to_cam_angle(obj, joint_angle)
             % convert joint angle to corresponding cam angle
-            cam_angle = (joint_angle - obj.cam_theta_range(1))*obj.get_joint_angle_sign();
+            cam_angle = (joint_angle - obj.joint_param.theta_range(1))*obj.get_joint_angle_sign();
         end
 
         
@@ -254,11 +260,11 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         function ema = get_ema(obj, theta)
             % get effective moment arm at current joint angle
             % (interp/extrap from saved data)
-            key = [num2str(obj.cam_rad0),',',num2str(obj.cam_slope)]; % map key
+            key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
             
             if ~obj.cam_map.isKey(key) % if key doesn't already exist, calculate data
                 fprintf('NOT KEY: %s\n', key)
-                obj.update_cam_data([obj.cam_rad0, obj.cam_slope]);
+                obj.update_cam_data([obj.joint_param.rad0, obj.joint_param.slope]);
             end
 
             cam_data = obj.cam_map(key); % get cam data
@@ -275,7 +281,7 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         function disp = get_joint_displace(obj, theta0, theta_cur)
             % get joint displacement at current joint angle from initial angle
             % (interp/extrap from saved data)
-            key = [num2str(obj.cam_rad0),',',num2str(obj.cam_slope)]; % map key
+            key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
             cam_data = obj.cam_map(key);
             linear_displace_vec = cam_data{2};            
             beta_vec = obj.cam_param.beta_vec;
@@ -292,19 +298,12 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         
         
         %% MTU stuff
-        function [cont_musc, stretch_tendon, force] = calc_mtu_state(obj, pres, disp)
+        function [cont_musc, stretch_tendon, force] = calcMtuState(obj, pres, disp)
             % calculate muscle contraction & corresponding tendon displacement
             persistent psf
-
             if isempty(obj.force_sf) % load force-length-pressure surface fit
-%                 folder_surf_fit = ['C:\Users\',obj.user,'\Dropbox (GaTech)\',...
-%                     'Research\Hexapod\testing\force characterization\',...
-%                     'clean_cut_1p25D_crimp_over_tube_sleeve'];
-%                 file_surf_fit = ['surface_fit-clean_cut_1p25D_crimp_over_',...
-%                     'tube_sleeve_345kpa.mat'];
-                
                 surf_fit_path = fullfile(obj.repo_path,...
-                    'modeling', 'MuscleJoint', 'data', 'force-calibration',...
+                    'modeling', '@MuscleJoint', 'muscle-data', 'force-calibration',...
                     'surface_fit-clean_cut_1p25D_crimp_over_tube_sleeve_345kpa.mat');
                 
                 sf = load(surf_fit_path, 'sf'); 
@@ -322,8 +321,8 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             % = k*disp + k*cont
             p = [psf(1),... % cont^3
                  (psf(2) + psf(3)*pres),... % cont^2
-                 (psf(4) + psf(5)*pres + psf(6)*pres^2 - obj.k_tendon),... % cont
-                 (psf(7) + psf(8)*pres + psf(9)*pres^2 + psf(10)*pres^3 - obj.k_tendon*disp)]; % constant 
+                 (psf(4) + psf(5)*pres + psf(6)*pres^2 - obj.joint_param.k_tendon),... % cont
+                 (psf(7) + psf(8)*pres + psf(9)*pres^2 + psf(10)*pres^3 - obj.joint_param.k_tendon*disp)]; % constant 
             r = roots(p);
             cont_musc = r(3);
        
@@ -333,13 +332,13 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             
             if cont_musc <= 0 % if zero / negative contraction
                 %TODO: rethink infinitely stiff/no tendon 
-                if obj.k_tendon >= 1e5 % if tendon is approximately infinitely stiff                    
+                if obj.joint_param.k_tendon >= 1e5 % if tendon is approximately infinitely stiff                    
                     force = max(0,obj.force_sf(0,pres)) + 1e4*(-cont_musc); % make muscle very stiff in tension (1e2 N/cm)
                     stretch_tendon = 0;
                 else
                     cont_musc = 0; % set contraction to zero (assume no stretch)
                     stretch_tendon = max(0,disp); % disregard negative displacement
-                    force = obj.k_tendon*stretch_tendon;
+                    force = obj.joint_param.k_tendon*stretch_tendon;
                 end
             elseif cont_musc >= (6.5 + pres/300) % if beyond range of surf fit in contraction direction
                 cont_musc = 6.5 + pres/300;
@@ -347,13 +346,13 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
                 stretch_tendon = 0;
             else % if positive contraction in surface fit range
                 force = max(0,obj.force_sf(cont_musc,pres)); % disregard negative forces from fit
-                stretch_tendon = force/obj.k_tendon;
+                stretch_tendon = force/obj.joint_param.k_tendon;
             end           
         end
         
         
         %% main method
-        function joint_state_struct = torque_musc(obj, theta0, theta, t_act, p_max)
+        function joint_state_struct = calcJointState(obj, theta0, theta, t_act, p_max)
             % compute joint torque created by pneumatic actuator & cam
             % (cam & tendon parameters, initial joint angle, current joint angle,
             % time from actuation start)
@@ -377,7 +376,7 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
                 linear_displace(i) = obj.get_joint_displace(theta0, theta(i)); % calculate displacement
 
                 [muscle_contract(i), tendon_stretch(i), mtu_force(i)] = ...
-                    obj.calc_mtu_state(muscle_pressure(i), linear_displace(i)); % calculate contraction force & muscle/tendon lengths
+                    obj.calcMtuState(muscle_pressure(i), linear_displace(i)); % calculate contraction force & muscle/tendon lengths
 
                 torque(i) = mtu_force(i)*ema(i)/100; % calculate joint torque (Nm)
             end
@@ -392,7 +391,7 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         end
         
         
-        %% getters
+        %% Getters
         function cam_param = get_cam_param(obj)
             cam_param = obj.cam_param;
         end
@@ -405,6 +404,27 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         
         function force_sf = get_force_sf(obj)
             force_sf = obj.force_sf;
+        end
+        
+        
+        %% Setters
+        function set_joint_param(obj, joint_param)
+            obj.joint_param.rad0 = joint_param.rad0;
+            obj.joint_param.slope = joint_param.slope;
+            obj.joint_param.theta_range = deg2rad(joint_param.theta_range);
+            obj.joint_param.k_tendon = joint_param.k_tendon; 
+        end
+        
+        
+        function set_cam_param(obj, cam_param)
+            obj.cam_param.d = cam_param.d;
+            obj.cam_param.phi_range = deg2rad(cam_param.phi_range);
+            obj.cam_param.beta_range = deg2rad(cam_param.beta_range);
+            obj.cam_param.beta_inc = deg2rad(cam_param.beta_inc);
+            obj.cam_param.beta_vec = deg2rad(cam_param.beta_range(1):...
+                cam_param.beta_inc:cam_param.beta_range(2));
+            
+            obj.cam_param.filename = obj.create_cam_filename(); % construct cam file name from parameters
         end
 
         
