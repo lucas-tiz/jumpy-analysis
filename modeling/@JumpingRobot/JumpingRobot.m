@@ -27,6 +27,7 @@ classdef JumpingRobot < matlab.mixin.Copyable
         torso_pos = torsoPos(obj, x)
         animTrajectory(obj, dt, anim_delay, fig_num, vid) 
         plotTrajectory(obj)
+        exportData(obj, fullfile_export)
  
 
         function obj = JumpingRobot(config_file)
