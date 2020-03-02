@@ -25,15 +25,17 @@ for idx_j = 1:4 % loop over index corresponding to actuated joint
     % spring torque
     joint_angle_sign = obj.joints.(joint).get_joint_angle_sign();
     truth_stiff = joint_angle_sign*ang_cur >= ...
-        joint_angle_sign*obj.config.model.joint_stiff_lims(1,idx_j);
+        joint_angle_sign*deg2rad(obj.config.model.joint_stiff_lims(1,idx_j));
     tau_stiff = -truth_stiff.*obj.config.model.joint_stiff(idx_j)*...
-        (ang_cur-obj.config.model.joint_stiff_lims(1,idx_j));
+        (ang_cur-deg2rad(obj.config.model.joint_stiff_lims(1,idx_j)));
+    
     
     % damping torque
     truth_damp = joint_angle_sign*ang_cur >= ...
-        joint_angle_sign*obj.config.model.joint_damp_lims(idx_j);
+        joint_angle_sign*deg2rad(obj.config.model.joint_damp_lims(idx_j));
     tau_damp = -truth_damp.*obj.config.model.joint_damp(idx_j)*angvel_cur;
         
+    
     % total torque
     tau(idx_q,:) = tau_muscle + tau_stiff + tau_damp;
     
