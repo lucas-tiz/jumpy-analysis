@@ -1,10 +1,8 @@
 %TODO:
 %{
-test grid search
-test genetic algorithm
+*test genetic algorithm
 check speed of simulation calcs
 export optimization results during runtime
-export data
 export config
 %}
 
@@ -20,14 +18,22 @@ addpath(fullfile(repo_path, 'modeling')); % path to JumpingRobot class
 global t_comp0
 t_comp0 = now;
 
+datetime_opt = char(datetime('now','Format','yyyy-MM-dd-HH-mm-ss'));
+
+%% Globals
+global opt_param
+% global opt_param_discrete
+global export_fname 
+global export_opt_params
+
 
 %% Parameters
-config_file = fullfile(repo_path, 'modeling', 'robot_config_default.yaml');
-
+% file names
+config_fname = fullfile(repo_path, 'modeling', 'robot_config_default.yaml');
+export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
+export_fname = 'export-test'; % name prefix for export files
 
 % optimization parameter sets
-% global opt_param
-% global opt_param_discrete
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
 % opt_param.rad_knee = -3:0.1:5; %0:1:6; % (cm)
@@ -40,43 +46,37 @@ opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 % opt_param.t_hip = 0.0:0.1:0.5;
 % opt_type = 3;
 
-opt_param.rad_knee = 2; %3.40;
-opt_param.rad_hip = 2; %4.80;
-opt_param.slope_knee = 0; %-0.90;
+opt_param.rad_knee = 4:5; %3.40;
+opt_param.rad_hip = 4; %4.80;
+opt_param.slope_knee = 2; %-0.90;
 opt_param.slope_hip = 0; %-0.60;
-opt_param.k_tendon_knee = 50; %61.65;
-opt_param.k_tendon_hip = 50; %37.53;
-opt_param.t_knee = 0; %0.27;
-opt_param.t_hip = 0; %0.29;
+opt_param.k_tendon_knee = 500; %61.65;
+opt_param.k_tendon_hip = 500; %37.53;
+opt_param.t_knee = 0.1; %0.27;
+opt_param.t_hip = 0.2; %0.29;
 opt_type = 1;
 
-global opt_fieldnames
-opt_fieldnames = sort(fieldnames(opt_param));
+% global opt_fieldnames
+% opt_fieldnames = sort(fieldnames(opt_param));
 
 % simulation parameters
 sim_param.t_sim = 1; % simulation time
 sim_param.dt = 1e-3; % delta t
 sim_param.liftoff_stop = 1; % stop simulation at liftoff 
 
+% data export parameters
+export_opt_params = 0; % export opt params: 1=export final, 2=export updates TODO
+export_sim_data = 1; % export simulation data
+export_anim = 1; % export animation to video
+
 % animation parameters
-animation = 1;
 anim_delay = 0.00; % animation delay between frames
-vid.export = 0; % animation export on
-% vid.path = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Hexapod\analysis\anim'; %TODO: relative path?
-vid.path ='/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/anim';
-vid.file = 'anim_export_test_17'; % animation video file name
 vid.Quality = 50;
 vid.FrameRate = 60;
 
-% data export parameters %TODO
-global f_save
-global save_data
-f_save = 'test';
-save_data = 0; %TODO
-
 
 %% Instantiate robot
-robot = JumpingRobot(config_file);
+robot = JumpingRobot(config_fname);
 
 v.export = 0;
 robot.animTrajectory(sim_param.dt,anim_delay,1,v); % display model in initial state
@@ -95,26 +95,16 @@ joint.update_cam_data(sweep_arr_joint); % update cam data
 % grid search
 if opt_type == 1
     
-    fn = sort(fieldnames(opt_param));
-    combvec_cell = cell(numel(fn),1);
+    fn = sort(fieldnames(opt_param)); % sort optimization parameter fieldnames
+    combvec_cell = cell(numel(fn),1); % cell array to store opt param values
     for idx_fn = 1:numel(fn)
-        combvec_cell{idx_fn} = opt_param.(fn{idx_fn});
+        combvec_cell{idx_fn} = opt_param.(fn{idx_fn}); % add all values corresponding to fieldname
     end
-    sweep_arr = combvec(combvec_cell{:})';
-    
-    % global sweep_vec
-%     sweep_vec = combvec(...
-%         opt_param.rad_knee_vec,...
-%         opt_param.rad_hip_vec,...
-%         opt_param.slope_knee_vec,...
-%         opt_param.slope_hip_vec,...
-%         opt_param.k_tendon_knee_vec,...
-%         opt_param.k_tendon_hip_vec,...
-%         opt_param.t_knee_vec,...
-%         opt_param.t_hip_vec)';    
+    sweep_arr = combvec(combvec_cell{:})'; % create sweep array of all opt param combos
     s = size(sweep_arr);
-    global n
-    n = s(1);
+    global n 
+    n = s(1); % number of simulation combinations
+    
     fprintf('n: %i, estimated run time: %0.1f min\n\n', n, n*sim_param.t_sim*2.1/60)
 
     global v_vert_jump_max;
@@ -122,15 +112,15 @@ if opt_type == 1
     opt_res_arr = zeros(n,1);
 
     global p
-    global h
-    p = 0;
+    p = 0; % number of simulations run
     D = parallel.pool.DataQueue;
-    h = waitbar(0, 'Running...');
+    global h_bar
+    h_bar = waitbar(0, 'Running...');
     afterEach(D, @nUpdateWaitbar);
 
     tic
-    for i = 1:n %DEBUG
-    % parfor (i = 1:n, 32) 
+%     for i = 1:n %DEBUG
+    parfor (i = 1:n) 
         robot_i = copy(robot); % create copy of robot
 
         updateOptParams(robot_i, sweep_arr(i,:), opt_param); % update parameters
@@ -141,7 +131,7 @@ if opt_type == 1
         send(D, [i, robot_i.sim_data.info_aerial.t, ...
             robot_i.sim_data.info_aerial.v(1), sweep_arr(i,:)]);
     end
-    close(h);
+    close(h_bar);
     [vy_jump_max_confirm, idx_jump_max] = max(opt_res_arr);
 
     fprintf('\ntotal elapsed time: %s h:m:s\n', datestr(now-t_comp0,13))    
@@ -149,44 +139,9 @@ if opt_type == 1
     fprintf('optimal params:\n')    
     for idx_fn = 1:numel(fn)
         fprintf('    %s:  %0.2f\n', fn{idx_fn}, sweep_arr(idx_jump_max,idx_fn));
-    end
-        
-%     fprintf('    knee delay:  %0.2f\n', sweep_arr(idx_jump_max,1))
-%     fprintf('    knee delay:  %0.2f\n', sweep_arr(idx_jump_max,1))
-%     fprintf('    tendon knee: %0.2f\n', sweep_arr(idx_jump_max,2))
-%     fprintf('    tendon hip:  %0.2f\n', sweep_arr(idx_jump_max,3))
-%     fprintf('    radius knee: %0.2f\n', sweep_arr(idx_jump_max,4))
-%     fprintf('    radius hip:  %0.2f\n', sweep_arr(idx_jump_max,5))
-%     fprintf('    slope knee:  %0.2f\n', sweep_arr(idx_jump_max,6))
-%     fprintf('    slope hip:   %0.2f\n\n', sweep_arr(idx_jump_max,7))
-    
-    param_vec_best = sweep_arr(idx_jump_max,:);
+    end    
 end
 
-% fminsearch
-% if opt_type == 2
-%     knee_delay0 = 0.0; %(s)
-%     k_tendon_knee0 = 500; % (N cm)
-%     k_tendon_hip0 = 500; % (N cm)
-%     rad_knee0 = 2; % (cm)
-%     rad_hip0 = 2; % (cm)
-%     slope_knee0 = 0; 
-%     slope_hip0 = 0;
-% 
-%     par_vec0 = [knee_delay0, k_tendon_knee0, k_tendon_hip0, rad_knee0, rad_hip0,...
-%                 slope_knee0, slope_hip0];
-%             
-%     figure(1111); clf
-%     hold on
-%     grid on
-%     ylim([0 7])
-% 
-%     objFun = @(par_vec)negJumpVel(par_vec, hexapod, knee_joint, hip_joint, sim_param);
-% 
-%     options = optimset('Display', 'iter', 'OutputFcn', @outputFcn, 'MaxIter', 100);
-%     
-%     [par_vec, vy_neg] = fminsearch(objFun, par_vec0, options);
-% end
 
 % genetic algorithm
 if opt_type == 3
@@ -250,79 +205,28 @@ end
 % simulate optimal config
 fprintf('\nsimulating optimal config\n')
 sim_param.t_sim = 1;
-sim_param.dt = 5e-3;
+sim_param.dt = 5e-4;
 sim_param.liftoff_stop = 0;
 
-updateOptParams(robot, sweep_arr(i,:), opt_param); % update parameters
+updateOptParams(robot, sweep_arr(idx_jump_max,:), opt_param); % update parameters
 robot.simRobot(sim_param);
 robot.calcJumpTrajectory();
 fprintf('optimized jump height: %0.3f\n', robot.sim_data.info_jump.height)
 
 
-% % save optimal data
-% if save_data == 1
-%     save(['data_opt/optimal_data_', f_save, '.mat'], 't_vec', 'x_arr', 'torque_arr',...
+% % save optimal data todo
+%     save(['data_opt/optimal_data_', export_fname, '.mat'], 't_vec', 'x_arr', 'torque_arr',...
 %         'j_state_arr', 'react_arr', 'obj.sim_data.info_aerial', 'y_torso', 't_jump',...
 %         'h_jump')
 % end
 
-%% Export data
-% 
-% thetadd = diff(x_arr(:,11:14),1,1)/sim_param.dt;
-% thetadd = [thetadd; zeros(1,4)];
-% 
-% f123 = figure(123); clf
-% hold on
-% grid on
-% plot(t_vec, thetadd(:,1))
-% plot(t_vec, thetadd(:,2))
-% plot(t_vec, thetadd(:,3))
-% plot(t_vec, thetadd(:,4))
-% 
-% 
-% % [time (s), 
-% % pres1: right knee(kPa), pres2: right hip (kPa), pres3: left hip (kPa), pres4: left knee(kPa)
-% % cont1: right knee (cm), cont2: right hip (cm), cont3: left hip(cm), cont4: left knee (cm)
-% % elong1: right knee (cm), elong2: right hip (cm), elong3: left hip (cm), elong4: left knee (cm)
-% % force1: right knee (N), force2: right hip (N), force3: left hip (N), force4: left knee (N)
-% % tau2: right knee (Nm), tau3: right hip (Nm), tau4: left hip (Nm), tau5: left knee (Nm)
-% % theta2: right knee (rad), theta3: right hip (rad), theta4: left hip (rad), theta5: left knee (rad)
-% % theta2d: right knee (rad/s), theta3d: right hip (rad/s), theta4d: left hip (rad/s), theta5d: left knee (rad/s)
-% % theta2dd: right knee (rad/s^2), theta3dd: right hip (rad/s^2), theta4dd: left hip (rad/s^2), theta5dd: left knee (rad/s^2)
-% 
-% header = ['time, ',...
-%     'pres-kr, pres-hr, pres-hl, pres-kl, ',...
-%     'cont-kr, cont-hr, cont-hl, cont-kl, ',... 
-%     'elong-kr, elong-hr, elong-hl, elong-kl, ',...
-%     'force-kr, force-hr, force-hl, force-kl, ',...
-%     'tau-kr, tau-hr, tau-hl, tau-kl, ',...
-%     'theta-kr, theta-hr, theta-hl, theta-kl ',...
-%     'thetad-kr, thetad-hr, thetad-hl, thetad-kl ',...
-%     'thetadd-kr, thetadd-hr, thetadd-hl, thetadd-kl'];
-% 
-% data_export = [t_vec',... % time
-%     j_state_arr{1}.muscle_pressure, j_state_arr{2}.muscle_pressure, j_state_arr{3}.muscle_pressure, j_state_arr{4}.muscle_pressure,... % muscle pressures
-%     j_state_arr{1}.muscle_contract, j_state_arr{2}.muscle_contract, j_state_arr{3}.muscle_contract, j_state_arr{4}.muscle_contract,... % muscle contraction lengths
-%     j_state_arr{1}.tendon_stretch, j_state_arr{2}.tendon_stretch, j_state_arr{3}.tendon_stretch, j_state_arr{4}.tendon_stretch,... % tendon elongations
-%     j_state_arr{1}.mtu_force, j_state_arr{2}.mtu_force, j_state_arr{3}.mtu_force, j_state_arr{4}.mtu_force,... % muscle forces
-%     j_state_arr{1}.torque, j_state_arr{2}.torque, j_state_arr{3}.torque, j_state_arr{4}.torque,... % joint torques
-%     x_arr(:,4), x_arr(:,5), x_arr(:,6), x_arr(:,7),... % joint angles
-%     x_arr(:,11), x_arr(:,12), x_arr(:,13), x_arr(:,14),... % joint angular velocities
-%     thetadd(:,1), thetadd(:,2), thetadd(:,3), thetadd(:,4)]; % joint angular accelerations
-%     
-% 
-% 
-% file_export = 'jump_data';
-% 
-% 
-% file_export_path = fullfile(repo_path,'modeling','sim-data',[file_export, '.csv']);    
-% fid = fopen(file_export_path, 'w'); 
-% fprintf(fid,'%s\n',header);
-% fclose(fid);
-% dlmwrite(file_export_path, data_export, '-append');
-    
 
-    
+%% Export data
+if export_sim_data == 1
+    file_export = [datetime_opt, ' - ', export_fname, '_sim-data.csv'];
+    fullfile_export = fullfile(export_path, 'sim-data', file_export);
+    robot.exportData(fullfile_export);
+end
 
 
 %% Plot
@@ -332,6 +236,10 @@ robot.plotTrajectory()
 %% Animation
 % showmotion(hexapod, t_vec, x_arr(:,1:hexapod.NB)') 
 
+vid.export = export_anim;
+vid.path =  fullfile(export_path, 'anim');
+vid.file = [datetime_opt, ' - ', export_fname, '_anim']; %'anim_export_test_17'; % animation video file name
+
 sim_param.dt = 1e-3;
 robot.animTrajectory(sim_param.dt,anim_delay,5,vid);
 
@@ -340,51 +248,45 @@ robot.animTrajectory(sim_param.dt,anim_delay,5,vid);
 function nUpdateWaitbar(sim_info)
     global opt_param
     global v_vert_jump_max
-    global f_save
-    global save_data
+    global export_fname
+    global export_opt_params
     global p
     global n
-    global h
+    global h_bar
     
-    waitbar(p/n, h);
+    waitbar(p/n, h_bar);
     p = p + 1;
-    fprintf('%10.0f %10.2f%%, %10.2f s\n', sim_info(1), p/n*100, toc) 
+    fprintf('%10.0f %10.2f%%, %10.2f s', sim_info(1), p/n*100, toc) 
     
      if sim_info(3) > v_vert_jump_max
         idx_jump_max = sim_info(1);
         t_jump_max = sim_info(2);
         v_vert_jump_max = sim_info(3);
-        fprintf('jump velocity: %0.3f, NEW MAX ----------\n', v_vert_jump_max)
+        fprintf(', NEW MAX jump velocity: %0.3f\n', v_vert_jump_max)
         
-        if save_data == 1
-            sweep = sim_info(4:end);
-            
-            fid = fopen(['data/optimal_params_',f_save,'.txt'],'w');
+%         sweep = sim_info(4:end);
+%         fn = sort(fieldnames(opt_param));
+%         for idx_fn = 1:numel(fn)
+%             fprintf('         %s:  %0.2f\n', fn{idx_fn}, sweep(idx_fn));
+%         end
+%         fprintf('\n')
+        
+        if export_opt_params == 1
+            fid = fopen(['data/optimal_params_',export_fname,'.txt'],'w');
             fprintf(fid, ['optimal index: %i\n',...
                 'takeoff time: %0.3f s\n',...
                 'takeoff velocity: %0.3f m/s\n'], idx_jump_max, t_jump_max, vy_jump_max);
                 
+            sweep = sim_info(4:end);
             fn = sort(fieldnames(opt_param));
             for idx_fn = 1:numel(fn)
                 fprintf(fid, '    %s:  %0.2f\n', fn{idx_fn}, sweep(idx_fn));
             end
-                
-                
-%                 'knee delay:  %0.2f\n',...
-%                 'tendon knee: %0.2f\n',...
-%                 'tendon hip:  %0.2f\n',...
-%                 'radius knee: %0.2f\n',...
-%                 'radius hip:  %0.2f\n',...
-%                 'slope knee:  %0.2f\n',...
-%                 'slope hip:   %0.2f\n\n'],...
-%                 idx_jump_max, t_jump_max, vy_jump_max,...
-%                 sweep(1), sweep(2),...
-%                 sweep(3), sweep(4),...
-%                 sweep(5), sweep(6),...
-%                 sweep(7));
-                fclose(fid);
+            
+            fclose(fid);
         end         
      end
+     fprintf('\n')
 end
 
 
