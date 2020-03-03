@@ -1,5 +1,10 @@
-function exportData(obj, fullfile_export)
+function exportSimData(obj, fullfile_export)
     % export simulation data
+    
+    % save robot object
+    robot = obj;
+    save([fullfile_export, '.mat'], 'robot')
+
     
     d = obj.sim_data;
     
@@ -50,9 +55,9 @@ function exportData(obj, fullfile_export)
 %     file_export_path = fullfile(repo_path,'modeling','sim-data',[file_export, '.csv']);    
 %     fid = fopen(file_export_path, 'w'); 
 
-    fid = fopen(fullfile_export, 'w'); 
+    fid = fopen([fullfile_export, '.csv'], 'w'); 
     fprintf(fid,'%s\n',header);
     fclose(fid);
-    dlmwrite(fullfile_export, data_export, '-append');
+    dlmwrite([fullfile_export, '.csv'], data_export, '-append');
 
 end
