@@ -1,4 +1,4 @@
-function animTrajectory(obj, dt, anim_delay, fig_num, vid)
+function animTrajectory(obj, dt, anim_delay, fig_num, vid, t_span)
 
     if vid.export == 1
         video = VideoWriter(fullfile(vid.path,vid.file),'MPEG-4');
@@ -65,7 +65,13 @@ function animTrajectory(obj, dt, anim_delay, fig_num, vid)
     pause(0.2)
     tic
     inc = max(1, round(1/dt/100));
-    for i = 1:inc:length(obj.sim_data.t)        
+    
+    idx_start = find(obj.sim_data.t >= t_span(1), 1);
+    idx_end = find(obj.sim_data.t <= t_span(2), 1);
+    
+    for i = idx_start:inc:idx_end
+    
+%     for i = 1:inc:length(obj.sim_data.t)        
         while toc < obj.sim_data.t(i); continue; end % loop until at time
         set(hTime,'string',sprintf('%0.2f',obj.sim_data.t(i))) % update time display
 

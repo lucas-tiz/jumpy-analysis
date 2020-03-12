@@ -25,7 +25,9 @@ classdef JumpingRobot < matlab.mixin.Copyable
         foot_pos = footPos(obj, x)
         v_com = comVel(obj,x)
         torso_pos = torsoPos(obj, x)
-        animTrajectory(obj, dt, anim_delay, fig_num, vid) 
+        animTrajectory(obj, dt, anim_delay, fig_num, vid, t_span) %TODO: rename (animJump?)
+        drawRobot(obj, t, varargin)
+        dispJumpSeq(obj, t_seq, dim_subplot, fig_no)
         plotTrajectory(obj)
         exportSimData(obj, fullfile_export)
  
