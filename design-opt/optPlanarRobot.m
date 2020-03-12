@@ -37,25 +37,25 @@ export_fname = 'export-test'; % name prefix for export files
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
-% opt_param.rad_knee = -3:0.1:5; %0:1:6; % (cm)
-% opt_param.rad_hip = -3:0.1:5; %0:1:6; % (cm)
-% opt_param.slope_knee = -1:0.1:4; %-4:1:4; 
-% opt_param.slope_hip = -1:0.1:4; %-4:1:4;
-% opt_param.k_tendon_knee = 1e6; %linspace(10, 2000, 10); % (N cm)
-% opt_param.k_tendon_hip = 1e6; %linspace(10, 2000, 10); % (N cm)
-% opt_param.t_knee = 0.0:0.1:0.5;
-% opt_param.t_hip = 0.0:0.1:0.5;
-% opt_type = 3;
+opt_param.rad_knee = -3:0.1:5; %0:1:6; % (cm)
+opt_param.rad_hip = -3:0.1:5; %0:1:6; % (cm)
+opt_param.slope_knee = -1:0.1:4; %-4:1:4; 
+opt_param.slope_hip = -1:0.1:4; %-4:1:4;
+opt_param.k_tendon_knee = linspace(10, 2000, 10); % (N cm)
+opt_param.k_tendon_hip = linspace(10, 2000, 10); % (N cm)
+opt_param.t_knee = 0.0:0.1:0.5;
+opt_param.t_hip = 0.0:0.1:0.5;
+opt_type = 3;
 
-opt_param.rad_knee = 4:5; %3.40;
-opt_param.rad_hip = 3; %4.80;
-opt_param.slope_knee = 2:3; %-0.90;
-opt_param.slope_hip = 0; %-0.60;
-opt_param.k_tendon_knee = 500; %61.65;
-opt_param.k_tendon_hip = 500; %37.53;
-opt_param.t_knee = 0:0.1:0.1; %0.27;
-opt_param.t_hip = 0.2; %0.29;
-opt_type = 1;
+% opt_param.rad_knee = 4:5; %3.40;
+% opt_param.rad_hip = 3; %4.80;
+% opt_param.slope_knee = 2:3; %-0.90;
+% opt_param.slope_hip = 0; %-0.60;
+% opt_param.k_tendon_knee = 500; %61.65;
+% opt_param.k_tendon_hip = 500; %37.53;
+% opt_param.t_knee = 0:0.1:0.1; %0.27;
+% opt_param.t_hip = 0.2; %0.29;
+% opt_type = 1;
 
 % global opt_fieldnames
 % opt_fieldnames = sort(fieldnames(opt_param));
@@ -88,7 +88,10 @@ fullfile_export_opt_params = fullfile(export_path, 'opt-data', file_export_opt_p
 robot = JumpingRobot(config_fname);
 
 v.export = 0;
-robot.animTrajectory(sim_param.dt,anim_delay,1,v); % display model in initial state
+robot.animTrajectory(sim_param.dt,anim_delay,1,v,[0,0]); % display model in initial state
+
+%%
+robot.dispJumpSeq(0:1/9:1, [2,5], 10);
 
 
 %% Calculate cam data before simulations
