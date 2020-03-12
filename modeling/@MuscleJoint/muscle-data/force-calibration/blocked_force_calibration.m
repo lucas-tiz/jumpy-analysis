@@ -12,7 +12,7 @@ current_path = pwd;
 idx_repo = strfind(pwd, repo_folder);
 repo_path = current_path(1:(idx_repo-1 + length(repo_folder)));
 
-f.path = fullfile(repo_path, 'modeling', 'MuscleJoint', 'data',...
+f.path = fullfile(repo_path, 'modeling', '@MuscleJoint', 'muscle-data',...
     'force-calibration');
 
 
@@ -109,8 +109,8 @@ if forceOptSens3D.plot == 1
     f7 = figure(7); clf
     hold on
     grid on
-    xlim([-4,12]) %xlim([0,8.0])
-    ylim([-50,400])
+    xlim([-4, 12]) %xlim([0,8.0])
+    ylim([0,500])
     zlim([0 700]) %zlim([0 700])
     set(f7, 'Units', 'Normalized');
     xlab = xlabel('Contraction (cm)');
@@ -191,33 +191,33 @@ if forceOptSens3D.plot == 1
         'Lower',[0, -100*ones(1,9)]);
     
     % fit max contraction border line
-    pres = [0; testArr(1,:)']*6.89476; % (kPa)
-    cont0 = [0; cont_final];
-    cont = zeros(size(pres));
-    
-    for i = 1:length(pres)
-        options = optimset('Display','iter');
-        cont(i) = fminsearch(@(c) surfaceBoundaryObjFun(c, pres(i), sf), cont0(i), options);
-    end
-%     plot3(cont,pres, zeros(size(cont)), 'Marker', '.', 'LineStyle', 'none',...
-%         'MarkerSize', 30, 'Color', 'r')
-    
-%     max_cont_fit = fit(pres, cont, 'poly3');
-
-    fo = fitoptions('Method','NonlinearLeastSquares',...
-               'Lower',[-100, 0.01, 0.01, -100, -100],...
-               'Upper',[100, 100, 100, 100, 100],...
-               'StartPoint',[0,1,1,1,1]);
-    ft = fittype('a + b*log(x+c) + d*x + e*x^2', 'options',fo);
-    [cf, cgof] = fit(pres, cont, ft)
-    
-    cf_mod = cf;
-    cf_mod.a = cf.a - 0.5;
-    
-    pres_eval = 0:1:pres(end);
-%     plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
-    plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
-        'Color', 'r')
+%     pres = [0; testArr(1,:)']*6.89476; % (kPa)
+%     cont0 = [0; cont_final];
+%     cont = zeros(size(pres));
+%     
+%     for i = 1:length(pres)
+%         options = optimset('Display','iter');
+%         cont(i) = fminsearch(@(c) surfaceBoundaryObjFun(c, pres(i), sf), cont0(i), options);
+%     end
+% %     plot3(cont,pres, zeros(size(cont)), 'Marker', '.', 'LineStyle', 'none',...
+% %         'MarkerSize', 30, 'Color', 'r')
+%     
+% %     max_cont_fit = fit(pres, cont, 'poly3');
+% 
+%     fo = fitoptions('Method','NonlinearLeastSquares',...
+%                'Lower',[-100, 0.01, 0.01, -100, -100],...
+%                'Upper',[100, 100, 100, 100, 100],...
+%                'StartPoint',[0,1,1,1,1]);
+%     ft = fittype('a + b*log(x+c) + d*x + e*x^2', 'options',fo);
+%     [cf, cgof] = fit(pres, cont, ft)
+%     
+%     cf_mod = cf;
+%     cf_mod.a = cf.a - 0.5;
+%     
+%     pres_eval = 0:1:pres(end);
+% %     plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
+%     plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
+%         'Color', 'r')
 
 
     
@@ -252,7 +252,7 @@ if forceOptSens3D.plot == 1
             dgc = 0.25;
             dgp = 25;
 %             [xg, yg] = meshgrid(0:dgc:8, 0:dgp:350);
-            [xg, yg] = meshgrid(-4:dgc:12, 0:dgp:350);
+            [xg, yg] = meshgrid(-4:dgc:12, 0:dgp:500);
             zg = sf(xg,yg);
             colormap copper
             caxis([0 150])
@@ -292,14 +292,17 @@ if forceOptSens3D.plot == 1
 end
 
 
+forceOptSens3D.save = 1;
 if forceOptSens3D.save == 1
     figPos = [-26 8 6 5];
-    pub_figureFormat(f7)
+    pub_figureFormat(f7, 'CMU Serif')
     f7.PaperUnits = 'inches';
     f7.PaperPosition = figPos;
     f7.Units = 'inches';
     f7.Position = figPos;
-    print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
+%     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
+    export_fig 'force_surface_fit_global.png' -transparent -r600
+
 end
 
 
@@ -522,9 +525,30 @@ view(135,35) % (135, 45)
 % scatter3(Xs,Ys,Zs)
 % scatter3(dataArr(:,1),dataArr(:,2),dataArr(:,3))
 
-scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3), 80, '.r')
-surf(Xint,Yint,Zint)
 
+colors = get(gca, 'ColorOrder');
+scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3), 200, '.',...
+    'MarkerEdgeColor', colors(2,:))
+
+
+colormap copper
+caxis([0 150])
+surf(Xint,Yint,Zint, 'EdgeColor','none','FaceAlpha',0.5);
+
+
+
+forceOptSens3D.save = 1;
+if forceOptSens3D.save == 1
+    figPos = [-26 2 6 5];
+    pub_figureFormat(f8, 'CMU Serif')
+    f8.PaperUnits = 'inches';
+    f8.PaperPosition = figPos;
+    f8.Units = 'inches';
+    f8.Position = figPos;
+%     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
+    export_fig 'force_interp_global.png' -transparent -r600
+
+end
 
 %% Sigmoid stuff
 % clear, clc
