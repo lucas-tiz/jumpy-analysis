@@ -102,7 +102,7 @@ beq = zeros(4,1);
 
 % boundary conditions
 Aeq(1,1) = 1; beq(1) = 0; % y0 = 0
-Aeq(2,n_knot) = 1; beq(2) = 5; % yf = 1
+Aeq(2,n_knot) = 1; beq(2) = 1; % yf = 1
 Aeq(3, n_knot+1) = 1; beq(3) = 0; % vy0 = 0
 Aeq(4, n_knot+n_knot) = 1; beq(4) = 0; % vyf = 0
 
@@ -222,12 +222,12 @@ end
 %% plot
 linewidth = 1.5;
 
-figure(1); clf
+f1 = figure(1); clf
 subplot(1,3,1)
 hold on
 grid on
 plot(t, y_inf, 'LineWidth', linewidth)
-plot(t_sim, x_sim(:,1), '--')
+% plot(t_sim, x_sim(:,1), '--')
 xlabel('Time (s)')
 ylabel('Position')
 
@@ -235,7 +235,7 @@ subplot(1,3,2)
 hold on
 grid on
 plot(t, vy, 'LineWidth', linewidth)
-plot(t_sim, x_sim(:,2), '--')
+% plot(t_sim, x_sim(:,2), '--')
 xlabel('Time (s)')
 ylabel('Velocity')
 
@@ -243,10 +243,15 @@ subplot(1,3,3)
 hold on
 grid on
 plot(t, u1, 'LineWidth', linewidth)
-plot(t, u2, 'LineWidth', linewidth)
+% plot(t, u2, 'LineWidth', linewidth)
 xlabel('Time (s)')
-ylabel('Input')
-legend('u_1', 'u_2')
+ylabel('Thrust (pressure)')
+% legend('u_1', 'u_2')
+ylim([0 30])
+
+pub_figureFormat(f1, 'CMU Serif')
+f1.Position = [-1100, 425, 1025, 375];
+
 
 
 %% nonlinear constraints
