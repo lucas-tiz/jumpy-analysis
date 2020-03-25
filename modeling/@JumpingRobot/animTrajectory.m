@@ -67,7 +67,7 @@ function animTrajectory(obj, dt, anim_delay, fig_num, vid, t_span)
     inc = max(1, round(1/dt/100));
     
     idx_start = find(obj.sim_data.t >= t_span(1), 1);
-    idx_end = find(obj.sim_data.t <= t_span(2), 1);
+    idx_end = find(obj.sim_data.t <= t_span(2), 1, 'last');
     
     for i = idx_start:inc:idx_end
     
