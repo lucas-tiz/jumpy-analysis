@@ -27,7 +27,7 @@ p_def = exp(-alpha_exp*(t-t3))*p_seal;
 u = y_inf.*p_inf + y_seal*p_seal + y_def.*p_def;
 
 linewidth = 1.5;
-figure(1122); clf
+f = figure(1122); clf
 subplot(2,1,1)
 grid on
 hold on
@@ -35,9 +35,9 @@ plot(t,y_inf, 'LineWidth', linewidth)
 plot(t,y_seal, 'LineWidth', linewidth)
 plot(t,y_def, 'LineWidth', linewidth)
 % plot(t,y+y2, ':k', 'LineWidth', 3)
-legend('Open valve', 'Seal valve', 'Vent valve', 'Interpreter', 'Latex')
-xlabel('Time', 'Interpreter', 'Latex')
-ylabel('Signal', 'Interpreter', 'Latex')
+legend('Open valve', 'Seal valve', 'Vent valve')%, 'Interpreter', 'Latex')
+xlabel('Time')%, 'Interpreter', 'Latex')
+ylabel('Signal')%, 'Interpreter', 'Latex')
 
 
 subplot(2,1,2)
@@ -53,13 +53,15 @@ plot(t,p_def, ':', 'LineWidth', 1.25)
 % plot(t,p_def)
 % xlim([0 5])
 ylim([-5 15])
-legend('Combined', 'Inflate', 'Seal', 'Deflate', 'Interpreter', 'Latex')
-xlabel('Time', 'Interpreter', 'Latex')
-ylabel('Pressure', 'Interpreter', 'Latex')
+legend('Combined', 'Inflate', 'Seal', 'Deflate')%, 'Interpreter', 'Latex')
+xlabel('Time')%, 'Interpreter', 'Latex')
+ylabel('Pressure')%, 'Interpreter', 'Latex')
 
+pub_figureFormat(f, 'CMU Serif')
+set(f, 'Position', [-853, 405, 450, 450])
 
 filepath = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Thesis\proposal\diagrams\logistic smoothing';
-print(fullfile(filepath, 'smooth plot'), '-dpng', '-r600')
+print(fullfile(filepath, 'steep plot2'), '-dpng', '-r600')
 
 
 %% block powered by PAM "thrusters", one in +y direction, one in -y direction
