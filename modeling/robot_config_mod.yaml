@@ -25,7 +25,7 @@ model: # overall robot model parameters
   mu: 0.999 # Coulomb foot friction coefficient
 
 morphology: # robot morphology [shank_r, thigh_r, torso, thigh_l, shank_l]
-  l: [0.4, 0.3, 0.55, 0.3, 0.4] # (m) link lengths
+  l: [0.40, 0.30, 0.55, 0.30, 0.40] # (m) link lengths
   m: [0.31, 0.28, 0.54, 0.28, 0.31] # (kg) robot link masses [0.31, (0.23+0.05), (0.44+2*0.05), (0.23+0.05), 0.31]
   r_cyl: 0.02 # (m) cylinder radius of each link for inertial calcs
   # J: 1/12*m*(3*r_cyl^2 + l^2); # (kg/m^2) # cylinder inertia formula
@@ -33,7 +33,8 @@ morphology: # robot morphology [shank_r, thigh_r, torso, thigh_l, shank_l]
 state0: # initial robot state
   # q0: [-45, 90, 45, 45, 90] # (deg)  [angle 1, knee_r, hip_r, hip_l, knee_l] initial joint angles
   # q0: [-45, 110, 25, 25, 110]
-  q0: [-70, 140, 20, 20, 140]
+  # q0: [0, 160, -45, -45, 160]
+  q0: [0, 140, 20, 20, 140]
   qd0: [0, 0, 0, 0, 0]  # (rad/s) [angle 1, knee_r, hip_r, hip_l, knee_l] initial joint velocities
 
 control: # control parameters [knee_r, hip_r, hip_l, knee_l]
