@@ -1,16 +1,26 @@
 %TODO:
 %{
-add leg length to optimization
+normalize inputs
+
 update leg masses to reflect measurements + maybe add artificial torso
     weight
 adjust leg mass based on leg length
 
 check speed of simulation calcs
+
 export config
+
+make all this object-oriented: create function for robot class? or separate
+class?
+
+create parallelized meta-optimization?
+
 %}
 
 % Design optimization of robot
-clear, clc
+clear
+clear global
+clc
 
 repo_folder = 'jumpy-analysis';
 current_path = pwd;
@@ -25,8 +35,7 @@ datetime_opt_start = char(datetime('now','Format','yyyy-MM-dd-HH-mm-ss'));
 
 
 %% Globals
-% global opt_param
-% global opt_param_discrete
+global opt_param %TODO: somehow remove this?
 global export_fname 
 global export_opt_params
 global fullfile_export_opt_params
@@ -36,45 +45,43 @@ global fullfile_export_opt_params
 % file names
 config_fname = fullfile(repo_path, 'modeling', 'robot_config_mod.yaml');
 export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
-export_fname = 'export-test'; % name prefix for export files
+export_fname = 'TBD'; % name prefix for export files
 
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
-% opt_param.k_tendon_hip = linspace(10, 2000, 10); % (N cm)
-% opt_param.k_tendon_knee = linspace(10, 2000, 10); % (N cm)
-% opt_param.rad_hip = -3:0.1:5; %0:1:6; % (cm)
-% opt_param.rad_knee = -3:0.1:5; %0:1:6; % (cm)
-% opt_param.slope_hip = -1:0.1:4; %-4:1:4;
-% opt_param.slope_knee = -1:0.1:4; %-4:1:4; 
-% opt_param.t_hip = 0.0:0.1:0.5;
-% opt_param.t_knee = 0.0:0.1:0.5;
-% opt_type = 3;
+opt_param.k_tendon_hip = linspace(10, 2000, 10)/1000; % (kN cm) %DEBUG
+opt_param.k_tendon_knee = linspace(10, 2000, 10)/1000; % (kN cm) %DEBUG
+opt_param.l_shank = 0.25:0.1:0.55; % (m)
+opt_param.l_thigh = 0.25:0.1:0.55; % (m)
+opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
+opt_param.rad_knee = -3:0.1:6; %0:1:6; % (cm)
+opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
+opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
+opt_param.t_hip = 0.0:0.1:0.5; % (s)
+opt_param.t_knee = 0.0:0.1:0.5; % (s)
+opt_type = 2;
+rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
 
-opt_param.k_tendon_hip = 1799; %37.53;
-opt_param.k_tendon_knee = 310; %61.65;
+% opt_param.k_tendon_hip = 250.13; %37.53;
+% opt_param.k_tendon_knee = 546.49; %61.65;
+% opt_param.l_shank = 0.40; %0.55;
+% opt_param.l_thigh = 0.50; %0.25:0.1:0.55;
+% opt_param.rad_hip = 0; %4.80;
+% opt_param.rad_knee = 0; %3.40;
+% opt_param.slope_hip = 3.80; %-0.60;
+% opt_param.slope_knee = 1.70; %-0.90;
+% opt_param.t_hip = 0.01; %0.29;
+% opt_param.t_knee = 0.01; %0.27;
+% opt_type = 1;
 
-opt_param.l_shank = 0.25:0.1:0.55;
-opt_param.l_thigh = 0.25:0.1:0.55;
-
-opt_param.rad_hip = 5.40; %4.80;
-opt_param.rad_knee = 0.60; %3.40;
-opt_param.slope_hip = 0.40; %-0.60;
-opt_param.slope_knee = 2.00; %-0.90;
-opt_param.t_hip = 0.31; %0.29;
-opt_param.t_knee = 0.02; %0.27;
-opt_type = 1;
-
-% global opt_fieldnames
-% opt_fieldnames = sort(fieldnames(opt_param));
-
-% simulation parameters
-sim_param.t_sim = 1; % simulation time
-sim_param.dt = 1e-3; % delta t
+% simulation parameters for design optimization
+sim_param.t_sim = 1; % (s) simulation time
+sim_param.dt = 1e-3; % (s) delta t
 sim_param.liftoff_stop = 1; % stop simulation at liftoff 
 
 % data export parameters
-export_opt_params = 0; % export opt params: 1=export updates, 2=export final TODO
+export_opt_params = 0; % export opt params: 1=export final, 2=export updates
 export_sim_data = 0; % export simulation data
 export_anim = 0; % export animation to video
 
@@ -93,25 +100,25 @@ fullfile_export_opt_params = fullfile(export_path, 'opt-data', file_export_opt_p
 
 
 %% Instantiate robot
-robot = JumpingRobot(config_fname);
-
-v.export = 0;
-robot.animTrajectory(sim_param.dt,anim_delay,1,v,[0,0]); % display model in initial state
-
-%%
-% robot.dispJumpSeq(0:1/9:1, [2,5], 10);
+robot = JumpingRobot(config_fname); % instantiate
+v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,1,v,[0,0]); % display model in initial state
 
 
 %% Calculate cam data before simulations
-sweep_arr_knee = combvec(opt_param.rad_knee, opt_param.slope_knee)';
-sweep_arr_hip = combvec(opt_param.rad_hip, opt_param.slope_hip)';
-sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1)) & ~isnan(sweep_arr_hip(:,2)),:)];
-sweep_arr_joint = unique(sweep_arr_joint,'rows'); % sweep vector of just knee/hip cam radius & slope
-joint = MuscleJoint(robot.config.knee, robot.config.cam); % create dummy joint
-joint.update_cam_data(sweep_arr_joint); % update cam data
+% sweep_arr_knee = combvec(opt_param.rad_knee, opt_param.slope_knee)';
+% sweep_arr_hip = combvec(opt_param.rad_hip, opt_param.slope_hip)';
+% sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1)) & ~isnan(sweep_arr_hip(:,2)),:)];
+% sweep_arr_joint = unique(sweep_arr_joint,'rows'); % sweep vector of just knee/hip cam radius & slope
+% joint = MuscleJoint(robot.config.knee, robot.config.cam); % create dummy joint
+% joint.update_cam_data(sweep_arr_joint); % update cam data
 
 
 %% Optimization
+
+[param_vec_optimal, vy_jump_opt]  = optDesign(robot, 'swarm', sim_param, opt_param);
+
+
+
 % grid search
 if opt_type == 1
     fn = sort(fieldnames(opt_param)); % sort optimization parameter fieldnames
@@ -199,9 +206,9 @@ if opt_type == 3
     %}
     
     opts = optimoptions(@ga, ...
-        'PopulationSize', 5, ... %2500
-        'MaxGenerations', 3, ... %40
-        'EliteCount', 2, ... %0.05*2500
+        'PopulationSize', 5, ... %20000
+        'MaxGenerations', 3, ... %10
+        'EliteCount', 2, ... %0.05*20000
         'FunctionTolerance', 1e-8, ...
         'PlotFcn', @gaplotbestf, ...
         'OutputFcn', @(options,state,flag)gaOutputFcn(options,state,flag,...
@@ -211,8 +218,6 @@ if opt_type == 3
     objFun = @(param_vec)gaObjFcn(param_vec, robot, sim_param, opt_param,...
         opt_param_discrete);
                                         
-    rng(0, 'twister');
-%     rng('shuffle');
     [xbest, fbest, exitflag] = ga(objFun, n_fn, [], [], [], [], ...
         lb, ub, [], idx_discrete, opts);
     
@@ -227,7 +232,7 @@ end
 
 %% Simulate optimal config
 fprintf('\nsimulating optimal config\n')
-sim_param.t_sim = 1;
+sim_param.t_sim = 2;
 sim_param.dt = 5e-4;
 sim_param.liftoff_stop = 0;
 
@@ -243,8 +248,9 @@ if export_sim_data == 1
 end
 
 
-%% Plot
+%% Plot simulation data & show jumping frames
 robot.plotTrajectory()
+% robot.dispJumpSeq(0:1/9:1, [2,5], 10);
         
 
 %% Animation
@@ -255,27 +261,9 @@ vid.export = export_anim;
 vid.path =  fullfile(export_path, 'anim');
 vid.file = [datetime_opt_start, ' - ', export_fname, ' anim']; %'anim_export_test_17'; % animation video file name
 
-dt = sim_param.dt*10;
+dt = sim_param.dt*5;
 % anim_delay = 0.05;
 robot.animTrajectory(dt,anim_delay,5,vid,[0 sim_param.t_sim]);
-
-
-%% TEST
-% 
-% opt_config.control.t_musc_activate = [opt_param.t_;    
-% opt_config.knee.k_tendon = op.k_tendon_knee;
-% opt_config.hip.k_tendon = op.k_tendon_hip;
-% opt_config.knee.rad0 = op.rad_knee;
-% opt_config.hip.rad0 = op.rad_hip;
-% opt_config.knee.slope = op.slope_knee;
-% opt_config.hip.slope = op.slope_hip;
-% 
-% 
-%     fn = sort(fieldnames(opt_param));
-%     op = struct(); % initialize
-%     for idx_fn = 1:numel(fn)
-%         op.(fn{idx_fn}) = param_vec(idx_fn);
-%     end
 
 
 %% Functions
@@ -346,14 +334,16 @@ function  updateOptParams(robot, param_vec, opt_param)
 
     % convert 'opt_param' struct to 'config' struct
     config.control.t_musc_activate = [op.t_knee, op.t_hip, op.t_hip, op.t_knee];    
-    config.knee.k_tendon = op.k_tendon_knee;
-    config.hip.k_tendon = op.k_tendon_hip;
+    config.knee.k_tendon = op.k_tendon_knee*1000;
+    config.hip.k_tendon = op.k_tendon_hip*1000;
     config.knee.rad0 = op.rad_knee;
     config.hip.rad0 = op.rad_hip;
     config.knee.slope = op.slope_knee;
     config.hip.slope = op.slope_hip;
-    config.morphology.l = [op.l_shank, op.l_thigh,...
-        robot.config.morphology.l(3), op.l_thigh, op.l_shank];
+    if any(contains(fn,'l_'))
+        config.morphology.l = [op.l_shank, op.l_thigh,...
+            robot.config.morphology.l(3), op.l_thigh, op.l_shank];
+    end
     robot.updateConfig(config)
 end
 
