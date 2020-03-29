@@ -99,6 +99,14 @@ function simRobot(obj, sim_param)
         if obj.sim_data.traj.pos_torso(idx_t,1) <= 0
             break
         end
+        
+        % end sim if knees go past 180 deg
+        theta2 = x_plus(4);
+        theta5 = x_plus(7);
+        if (theta2 > pi) || (theta5 > pi)
+            break
+        end
+        
     %     toc;
     end
     
