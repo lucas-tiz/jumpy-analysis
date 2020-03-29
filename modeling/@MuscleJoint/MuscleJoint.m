@@ -1,9 +1,9 @@
 classdef MuscleJoint < matlab.mixin.Copyable %handle
     % revolute joint actuated by pneumatic muscle
     properties        
-        joint_param % joint-specific parameters
+            joint_param % joint-specific parameters
         cam_param % cam parameters for calculating cam_map data
-        cam_map % mome
+        cam_map % moment arm and linear displacement data
     end
     
     properties (SetAccess = private)
@@ -15,7 +15,6 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
 %         cam_param % cam parameters for calculating cam_map data
 %         cam_map % moment arm and linear displacement data
     end
-    
     
     properties (Access = private)
         % private properties
@@ -31,26 +30,13 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             % Constructor
             obj.repo_path = obj.get_repo_path(); % get path to repository
             
-
-            
             % set up object joint-specific parameters & convert angles
             obj.set_joint_param(joint_param);
-%             obj.joint_param.rad0 = joint_param.rad0;
-%             obj.joint_param.slope = joint_param.slope;
-%             obj.joint_param.theta_range = deg2rad(joint_param.theta_range);
-%             obj.joint_param.k_tendon = joint_param.k_tendon;
-            
+
             % set up object cam parameters & convert angles
             obj.set_cam_param(cam_param);
-%             obj.cam_param.d = cam_param.d;
-%             obj.cam_param.phi_range = deg2rad(cam_param.phi_range);
-%             obj.cam_param.beta_range = deg2rad(cam_param.beta_range);
-%             obj.cam_param.beta_inc = deg2rad(cam_param.beta_inc);
-%             obj.cam_param.beta_vec = deg2rad(cam_param.beta_range(1):...
-%                 cam_param.beta_inc:cam_param.beta_range(2));
-            
+
             % create/load cam map if it exists
-%             obj.cam_param.filename = obj.create_cam_filename(); % construct cam file name from parameters
             obj.cam_map = containers.Map; % initialize to map
             obj.load_cam_data(); % load cam data if exists
         end
@@ -79,9 +65,9 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         
         function load_cam_data(obj)
             % load cam data from .mat file if corresponding data exists
-            if isfile(obj.cam_param.filename) % check data already exists
+            if isfile(obj.cam_param.filename) % check file already exists
                 load(obj.cam_param.filename, 'cam_map_saved', 'cam_param_saved')
-                if ((cam_param_saved.d == obj.cam_param.d) &&... % check parameters are the same
+                if ((cam_param_saved.d == obj.cam_param.d) &&... % check parameters are the same TODO: necessary
                     (isequal(cam_param_saved.phi_range, obj.cam_param.phi_range)) &&...
                     (isequal(cam_param_saved.beta_vec, obj.cam_param.beta_vec)) == 1)
 
@@ -211,15 +197,14 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         function update_cam_data(obj, sweep_arr)
             % calculate effective moment arm for all cam geometries
             % not previously saved; sweep_vec = [radius0, slope]
-            tic
-            fprintf('calculating cam data...\n')
+%             fprintf('calculating cam data...\n')
             
-            obj.load_cam_data(); % re-load cam data
+%             obj.load_cam_data(); % re-load cam data (for parallel i think) TODO: required if saving is an option?
             s = size(sweep_arr); % get sweep array size
             n_sweep = s(1); % get sweep array length (rows)
             beta_vec = obj.cam_param.beta_vec;
             n_beta = length(beta_vec);
-            tic
+%             tic
             for idx_sweep = 1:n_sweep % loop over sweep vector
                 cam_rad0_tmp = sweep_arr(idx_sweep,1); % (cm) cam radius at zero degrees
                 cam_slope_tmp = sweep_arr(idx_sweep,2); % (cm/rad) cam profile radius slope
@@ -245,22 +230,27 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             
                     obj.cam_map(key) = {ema_vec, linear_displace_vec}; % update temp cam map
                     
-                    fprintf('    updated %i of %i cam profiles, %4.1f elapsed\n',...
-                        idx_sweep, n_sweep, toc)
+%                     fprintf('    updated %i of %i cam profiles, %4.1f elapsed\n',...
+%                         idx_sweep, n_sweep, toc)
                 end
             end
-            fprintf('all cam profiles updated, %0.2f s elapsed\n\n', toc)
+%             fprintf('all cam profiles updated, %0.2f s elapsed\n\n', toc)
 
-            cam_map_saved = obj.cam_map; % create cam map save var
-            cam_param_saved = obj.cam_param; % create param save var
-            save(obj.cam_param.filename, 'cam_map_saved', 'cam_param_saved') % save cam map & params
+            %TODO: make saving an option?
+%             cam_map_saved = obj.cam_map; % create cam map save var
+%             cam_param_saved = obj.cam_param; % create param save var
+%             save(obj.cam_param.filename, 'cam_map_saved', 'cam_param_saved') % save cam map & params
         end
         
         
         function ema = get_ema(obj, theta)
             % get effective moment arm at current joint angle
             % (interp/extrap from saved data)
-            key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
+            
+            %DEBUG: trying rounding
+%             key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
+            key = [num2str(round(obj.joint_param.rad0),1), ',', ...
+                num2str(round(obj.joint_param.slope),1)]; % map key
             
             if ~obj.cam_map.isKey(key) % if key doesn't already exist, calculate data
                 fprintf('NOT KEY: %s\n', key)
@@ -281,7 +271,12 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         function disp = get_joint_displace(obj, theta0, theta_cur)
             % get joint displacement at current joint angle from initial angle
             % (interp/extrap from saved data)
-            key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
+            
+            %DEBUG: trying rounding
+%             key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
+            key = [num2str(round(obj.joint_param.rad0),1), ',', ...
+                num2str(round(obj.joint_param.slope),1)]; % map key
+            
             cam_data = obj.cam_map(key);
             linear_displace_vec = cam_data{2};            
             beta_vec = obj.cam_param.beta_vec;
