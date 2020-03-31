@@ -3,7 +3,7 @@ function plotTrajectory(obj)
     co = get(0, 'DefaultAxesColorOrder');
 
     % jump plot
-    f8 = figure(8); clf
+    f11 = figure(11); clf
     subplot(2,1,1)
     title('Jump Position (Torso)')
     xlabel('Time (s)')
@@ -28,7 +28,7 @@ function plotTrajectory(obj)
     legend('vertical', 'horizontal')
 
     % joint plots
-    f2 = figure(3); clf
+    f12 = figure(12); clf
     subplot(2,1,1)
     title('Joint Angles')
     xlabel('Time (s)')
@@ -62,7 +62,7 @@ function plotTrajectory(obj)
     plot([obj.sim_data.info_aerial.t,obj.sim_data.info_aerial.t], [ylims(1), ylims(2)], '--k', 'HandleVisibility','off')
 
     % joint state plots -------------------------------------------------------
-    f14 = figure(14); clf
+    f13 = figure(13); clf
     subplot(4,2,1)
     title('Knee Dynamics')
     hold on
@@ -170,7 +170,7 @@ function plotTrajectory(obj)
 
 
     % reaction force plots ----------------------------------------------------
-    f4 = figure(4); clf
+    f14 = figure(14); clf
     subplot(2,1,1)
     title('Normal GRFs')
     hold on
