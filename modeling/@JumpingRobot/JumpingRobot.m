@@ -50,17 +50,22 @@ classdef JumpingRobot < matlab.mixin.Copyable
             obj.joints.hip_right = MuscleJoint(obj.config.hip, obj.config.cam);
             obj.joints.hip_left = MuscleJoint(obj.config.hip, obj.config.cam);
 
-            % create state (ground-shank joint angle calc for symmetric
-            % frame & level torso)
-            theta2 = obj.config.state0.q0(2);
-            theta3 = obj.config.state0.q0(3);
-            theta1 = pi/2 - deg2rad(theta2 + theta3);
-            obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
-                            0, 0, deg2rad(obj.config.state0.qd0)];
-            
-            % initialize simulation data %TODO: replace 'sim_data' with 'traj'?
-            obj.sim_data.t = 0; %TODO: only for anim? maybe just have option for [] in anim
-            obj.sim_data.x = obj.state.x0;
+            % create state
+%             theta2 = obj.config.state0.q0(2);
+%             theta3 = obj.config.state0.q0(3);
+%             theta1 = pi/2 - deg2rad(theta2 + theta3);
+%             obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
+%                             0, 0, deg2rad(obj.config.state0.qd0)];
+%             
+%             
+            % create initial state vector, update inital robot pose, and
+            % initialize 'sim_data'
+            obj.updateInitialState();
+% 
+%             % initialize simulation time %TODO: replace 'sim_data' with 'traj'?
+% 
+%             obj.sim_data.t = 0; %TODO: only for anim? maybe just have option for [] in anim
+%             obj.sim_data.x = obj.state.x0;
         end
         
         
@@ -110,9 +115,25 @@ classdef JumpingRobot < matlab.mixin.Copyable
                     obj.config.morphology = morphology;                
                 end
                    
+                % update initial state (reset 'sim_data')
+                obj.updateInitialState();                
             end
         end
 
+        
+        function updateInitialState(obj)
+            % Update initial state vector & robot pose, and initialize 'sim_data'
+            theta2 = obj.config.state0.q0(2);
+            theta3 = obj.config.state0.q0(3);
+            theta1 = pi/2 - deg2rad(theta2 + theta3); % ground-shank joint angle calc for symmetric frame & level torso
+            obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
+                            0, 0, deg2rad(obj.config.state0.qd0)];
+            
+            %TODO: replace 'sim_data' with 'traj'?
+            obj.sim_data.x = obj.state.x0; % this allows for plotting of initial pose
+            obj.sim_data.t = 0; % this allows for plotting of initial pose
+        end
+        
         
         function calcJumpTrajectory(obj)
             % calculate jump trajectory
