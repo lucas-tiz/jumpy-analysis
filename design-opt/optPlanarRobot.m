@@ -65,18 +65,18 @@ opt_param.theta0_knee = 0:10:180; % (deg)
 opt_type = 2;
 rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
 
-opt_param.k_tendon_hip = 1.28; %37.53;
-opt_param.k_tendon_knee = 1.11; %61.65;
-opt_param.l_shank = 0.39; %0.55;
-opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
-opt_param.rad_hip = 3.98; %4.80;
-opt_param.rad_knee = -1.56; %3.40;
-opt_param.slope_hip = -1.00; %-0.60;
-opt_param.slope_knee = 3.95; %-0.90;
-opt_param.t_hip = 0.39; %0.29;
-opt_param.t_knee = 0.24; %0.27;
-opt_param.theta0_hip = -37.68;
-opt_param.theta0_knee = 158.08;
+% opt_param.k_tendon_hip = 1.28; %37.53;
+% opt_param.k_tendon_knee = 1.11; %61.65;
+% opt_param.l_shank = 0.39; %0.55;
+% opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
+% opt_param.rad_hip = 3.98; %4.80;
+% opt_param.rad_knee = -1.56; %3.40;
+% opt_param.slope_hip = -1.00; %-0.60;
+% opt_param.slope_knee = 3.95; %-0.90;
+% opt_param.t_hip = 0.39; %0.29;
+% opt_param.t_knee = 0.24; %0.27;
+% opt_param.theta0_hip = -36.68;
+% opt_param.theta0_knee = 158.08;
 % opt_type = 1;
 
 % simulation parameters for design optimization
@@ -153,15 +153,14 @@ options.UseParallel = true;
 
 
 
-% % update robot to first index of 'opt_param'
+% update robot to first index of 'opt_param'
 % fn = sort(fieldnames(opt_param));
-% param_vec = zeros(numel(fn),1);
+% param_vec_optimal = zeros(numel(fn),1);
 % for idx_fn = 1:numel(fn)
 %     opt_param_vec = opt_param.(fn{idx_fn});
-%     param_vec(idx_fn) = opt_param_vec(1);
+%     param_vec_optimal(idx_fn) = opt_param_vec(1);
 % end
-% optimizer.updateOptParams(robot, param_vec)
-% v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,16,v,[0,0]); % display model in initial state
+% optimizer.updateOptParams(robot, param_vec_optimal)
 
 
 
@@ -197,7 +196,8 @@ if opt_type == 1
 %     parfor (idx_opt = 1:n) 
         robot_i = copy(robot); % create copy of robot
 
-        updateOptParams(robot_i, sweep_arr(idx_opt,:), opt_param); % update parameters
+        optimizer.updateOptParams(robot_i, sweep_arr(idx_opt,:)); % update parameters
+%         updateOptParams(robot_i, sweep_arr(idx_opt,:), opt_param); % update parameters
 
         robot_i.simRobot(sim_param); % simulate
 
@@ -281,7 +281,7 @@ end
 %% Simulate optimal config
 fprintf('\nsimulating optimal config\n')
 sim_param.t_sim = 2;
-sim_param.dt = 5e-4;
+% sim_param.dt = 5e-4;
 sim_param.liftoff_stop = 0;
 
 optimizer.updateOptParams(robot, param_vec_optimal); % update parameters
