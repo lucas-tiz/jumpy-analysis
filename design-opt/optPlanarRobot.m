@@ -1,6 +1,6 @@
 %TODO:
 %{
-normalize inputs
+*normalize inputs
 
 update leg masses to reflect measurements + maybe add artificial torso
     weight
@@ -10,11 +10,11 @@ check speed of simulation calcs
 
 export config
 
-make all this object-oriented: create function for robot class? or separate
-class?
-
 create parallelized meta-optimization?
 
+*higher-res cam data
+
+option for turning on/off cam param rounding
 %}
 
 % Design optimization of robot
@@ -45,7 +45,7 @@ global fullfile_export_opt_params
 % file names
 config_fname = fullfile(repo_path, 'modeling', 'robot_config_mod.yaml');
 export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
-export_fname = 'TBD'; % name prefix for export files
+export_fname = 'class-test'; % name prefix for export files
 
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
@@ -60,19 +60,23 @@ opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.t_hip = 0.0:0.1:0.5; % (s)
 opt_param.t_knee = 0.0:0.1:0.5; % (s)
+opt_param.theta0_hip = -45:5:45; % (deg)
+opt_param.theta0_knee = 0:10:180; % (deg)
 opt_type = 2;
 rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
 
-% opt_param.k_tendon_hip = 250.13; %37.53;
-% opt_param.k_tendon_knee = 546.49; %61.65;
-% opt_param.l_shank = 0.40; %0.55;
-% opt_param.l_thigh = 0.50; %0.25:0.1:0.55;
-% opt_param.rad_hip = 0; %4.80;
-% opt_param.rad_knee = 0; %3.40;
-% opt_param.slope_hip = 3.80; %-0.60;
-% opt_param.slope_knee = 1.70; %-0.90;
-% opt_param.t_hip = 0.01; %0.29;
-% opt_param.t_knee = 0.01; %0.27;
+opt_param.k_tendon_hip = 1.28; %37.53;
+opt_param.k_tendon_knee = 1.11; %61.65;
+opt_param.l_shank = 0.39; %0.55;
+opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
+opt_param.rad_hip = 3.98; %4.80;
+opt_param.rad_knee = -1.56; %3.40;
+opt_param.slope_hip = -1.00; %-0.60;
+opt_param.slope_knee = 3.95; %-0.90;
+opt_param.t_hip = 0.39; %0.29;
+opt_param.t_knee = 0.24; %0.27;
+opt_param.theta0_hip = -37.68;
+opt_param.theta0_knee = 158.08;
 % opt_type = 1;
 
 % simulation parameters for design optimization
@@ -81,9 +85,10 @@ sim_param.dt = 1e-3; % (s) delta t
 sim_param.liftoff_stop = 1; % stop simulation at liftoff 
 
 % data export parameters
-export_opt_params = 0; % export opt params: 1=export final, 2=export updates
-export_sim_data = 0; % export simulation data
-export_anim = 0; % export animation to video
+export_param.opt_param = 1; % export opt params: 1=export final, 2=export updates
+% export_opt_params = 0; % export opt params: 1=export final, 2=export updates
+export_param.sim_data = 0; % export simulation data
+export_param.anim = 0; % export animation to video
 
 % animation parameters
 anim_delay = 0.00; % animation delay between frames
@@ -93,15 +98,17 @@ vid.FrameRate = 60;
 
 %% Files
 file_export_sim_data = [datetime_opt_start, ' - ', export_fname, ' sim-data'];
-fullfile_export_sim_data = fullfile(export_path, 'sim-data', file_export_sim_data);
+fullfile_export_sim_data = fullfile(export_path, 'sim-data', file_export_sim_data); %TODO
 
 file_export_opt_params = [datetime_opt_start, ' - ', export_fname, ' opt-data.txt'];
 fullfile_export_opt_params = fullfile(export_path, 'opt-data', file_export_opt_params);
 
+export_param.fullfile_opt_param = fullfile_export_opt_params; %TODO
+
 
 %% Instantiate robot
 robot = JumpingRobot(config_fname); % instantiate
-v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,1,v,[0,0]); % display model in initial state
+v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,15,v,[0,0]); % display model in initial state
 
 
 %% Calculate cam data before simulations
@@ -114,8 +121,49 @@ v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,1,v,[0,0]); % display
 
 
 %% Optimization
+optimizer = OptDesign(robot, sim_param, opt_param, export_param);
 
-[param_vec_optimal, vy_jump_opt]  = optDesign(robot, 'swarm', sim_param, opt_param);
+
+% options.MaxIter = 3;
+% options.UseParallel = true;
+% [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('fmin', options);
+
+% options.MaxIter = 3;
+% options.Display = 'iter';
+% [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('sa', options);
+
+options.SwarmSize = 2000;
+options.MaxIter = 100;
+options.UseParallel = true;
+[param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
+
+
+%TODO:
+%{
+- change elite count
+- change crossover fraction
+- crossover function: heuristic? arithemtic? etc.
+%}
+% options.PopulationSize = 5;
+% options.MaxGenerations = 3;
+% options.EliteCount = 2;
+% options.UseParallel = true;
+% [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('ga', options);
+
+
+
+
+% % update robot to first index of 'opt_param'
+% fn = sort(fieldnames(opt_param));
+% param_vec = zeros(numel(fn),1);
+% for idx_fn = 1:numel(fn)
+%     opt_param_vec = opt_param.(fn{idx_fn});
+%     param_vec(idx_fn) = opt_param_vec(1);
+% end
+% optimizer.updateOptParams(robot, param_vec)
+% v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,16,v,[0,0]); % display model in initial state
+
+
 
 
 
@@ -236,14 +284,15 @@ sim_param.t_sim = 2;
 sim_param.dt = 5e-4;
 sim_param.liftoff_stop = 0;
 
-updateOptParams(robot, param_vec_optimal, opt_param); % update parameters
+optimizer.updateOptParams(robot, param_vec_optimal); % update parameters
+v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,15,v,[0,0]); % display model in initial state
 robot.simRobot(sim_param);
 robot.calcJumpTrajectory();
 fprintf('optimized jump height: %0.3f\n', robot.sim_data.info_jump.height)
 
 
 %% Export simulation data
-if export_sim_data == 1
+if export_param.sim_data == 1
     robot.exportSimData(fullfile_export_sim_data);
 end
 
@@ -257,13 +306,13 @@ robot.plotTrajectory()
 % showmotion(robot.spatialRobot, robot.sim_data.t,...
 %     robot.sim_data.x(:,1:robot.spatialRobot.NB)');
 
-vid.export = export_anim;
+vid.export = export_param.anim;
 vid.path =  fullfile(export_path, 'anim');
 vid.file = [datetime_opt_start, ' - ', export_fname, ' anim']; %'anim_export_test_17'; % animation video file name
 
 dt = sim_param.dt*5;
 % anim_delay = 0.05;
-robot.animTrajectory(dt,anim_delay,5,vid,[0 sim_param.t_sim]);
+robot.animTrajectory(dt,anim_delay,16,vid,[0 sim_param.t_sim]);
 
 
 %% Functions
