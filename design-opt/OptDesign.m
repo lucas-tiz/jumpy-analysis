@@ -304,9 +304,11 @@ classdef OptDesign %< matlab.mixin.Copyable
 
         function cost = objFcn(obj, param_vec)
             % Objective for fmincon, simulatedannealbnd: 
-            % negative vertical velocity at liftoff    
+            % negative vertical velocity at liftoff
+%             tic
             robot_copy = copy(obj.robot); % create copy of robot
             obj.updateOptParams(robot_copy, param_vec); % update parameters
+%             toc
             robot_copy.simRobot(obj.sim_param);
             cost = obj.objective_offset - robot_copy.sim_data.info_aerial.v(1);
         end %x
