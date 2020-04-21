@@ -1,9 +1,9 @@
 classdef MuscleJoint < matlab.mixin.Copyable %handle
     % revolute joint actuated by pneumatic muscle
     properties        
-            joint_param % joint-specific parameters
-        cam_param % cam parameters for calculating cam_map data
-        cam_map % moment arm and linear displacement data
+%         joint_param % joint-specific parameters
+%         cam_param % cam parameters for calculating cam_map data
+%         cam_map % moment arm and linear displacement data
     end
     
     properties (SetAccess = private)
@@ -11,9 +11,9 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         repo_folder = 'jumpy-analysis';
         repo_path
 
-%         joint_param % joint-specific parameters
-%         cam_param % cam parameters for calculating cam_map data
-%         cam_map % moment arm and linear displacement data
+        joint_param % joint-specific parameters
+        cam_param % cam parameters for calculating cam_map data
+        cam_map % moment arm and linear displacement data
     end
     
     properties (Access = private)
@@ -118,93 +118,20 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             cam_angle = (joint_angle - obj.joint_param.theta_range(1))*obj.get_joint_angle_sign();
         end
 
-        
-        function [ema,r_tan,phi,psi] = calc_ema(obj, beta, cam_rad0, cam_slope)
-            % calculate effective moment arm for cam/joint parameters
-            persistent phi_sym
-            if isempty(phi_sym)
-                phi_sym = sym('phi_sym');
-            end
-
-            % parameters
-            d = obj.cam_param.d; % (cm) link length
-            r0 = cam_rad0; % (cm) cam radius at zero degrees
-            m = cam_slope; % (cm/rad) cam profile radius slope
-            phi_range = obj.cam_param.phi_range; % (rad) cam angle range for which cam geometry exists
-
-            % if no cam profile exists, just return zeros
-            if (r0 == 0) && (m == 0)
-                ema = 0;
-                r_tan = 0;
-                phi = 0;
-                psi = 0;
-                return
-            end
-           
-            % formulate slopes
-            slope_cam = ( m*cos(beta-phi_sym) + (r0+m*phi_sym)*sin(beta-phi_sym) ) /...
-                ( (r0+m*phi_sym)*cos(beta-phi_sym) - m*sin(beta-phi_sym) );
-            slope_muscle = -( (r0+m*phi_sym)*cos(beta-phi_sym) ) /...
-                (-d + (r0+m*phi_sym)*sin(beta-phi_sym) );
-            
-            % solve for tangent angle
-            phi_solve = zeros(3,1);
-            phi_solve(1) = max([-100,vpasolve(slope_cam == slope_muscle, phi_sym, deg2rad(0))]);
-            phi_solve(2) = max([-100,vpasolve(slope_cam == slope_muscle, phi_sym, deg2rad(90))]);
-            phi_solve(3) = max([-100,vpasolve(slope_cam == slope_muscle, phi_sym, deg2rad(180))]);
-
-            % filter out negative tangent radii (not physically possible)
-            r_tan_solve = r0 + m*phi_solve; % radius at tangent point
-            idx = r_tan_solve >= 0;
-            phi_solve = phi_solve(idx);
-
-            % remove negative slopes
-            slope_solve = -( (r0+m*phi_solve).*cos(beta-phi_solve) ) ./...
-                (-d + (r0+m*phi_solve).*sin(beta-phi_solve) );
-            idx = slope_solve >= 0;
-            phi_solve = phi_solve(idx);
-            slope_solve = slope_solve(idx);
-
-            % filter by max slope
-            [~,idx] = max(slope_solve);
-            phi = phi_solve(idx); % cam parameterization angle at tangent point 
-            slope = slope_solve(idx); % slope at tangent point
-
-            % adjust for tangent points outside cam parameterization range
-            if phi < phi_range(1)
-                phi = phi_range(1);
-                slope = -( (r0+m*phi)*cos(beta-phi) ) / (-d + (r0+m*phi)*sin(beta-phi) );
-            elseif phi > phi_range(2)
-                phi = phi_range(2);
-                slope = -( (r0+m*phi)*cos(beta-phi) ) / (-d + (r0+m*phi)*sin(beta-phi) );
-            end
-
-            % calculate final values
-            r_tan = r0 + m*phi; % radius at tangent point
-            psi = atan(slope); % psi angle
-            ema = d*sin(psi); % effective moment arm
-
-            % if no physically possible values found
-            if isempty(ema)
-                ema = 0;
-                r_tan = 0;
-                phi = 0;
-                psi = 0;
-            end
-        end
-            
-        
+                
         function update_cam_data(obj, sweep_arr)
             % calculate effective moment arm for all cam geometries
             % not previously saved; sweep_vec = [radius0, slope]
-%             fprintf('calculating cam data...\n')
+            fprintf('calculating cam data...\n')
+            d = obj.cam_param.d;
+            phi_range = obj.cam_param.phi_range;
             
 %             obj.load_cam_data(); % re-load cam data (for parallel i think) TODO: required if saving is an option?
             s = size(sweep_arr); % get sweep array size
             n_sweep = s(1); % get sweep array length (rows)
             beta_vec = obj.cam_param.beta_vec;
             n_beta = length(beta_vec);
-%             tic
+            tic
             for idx_sweep = 1:n_sweep % loop over sweep vector
                 cam_rad0_tmp = sweep_arr(idx_sweep,1); % (cm) cam radius at zero degrees
                 cam_slope_tmp = sweep_arr(idx_sweep,2); % (cm/rad) cam profile radius slope
@@ -213,25 +140,20 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
                 if ~obj.cam_map.isKey(key) % if key doesn't already exist, calculate data
 
                     ema_vec = zeros(1,n_beta);
-                    r_tan_vec = zeros(1,n_beta);
+                    linear_displace_vec = zeros(1,n_beta);
+
+                    calc_ema = @(beta,r0,m,d,phi_range)obj.calc_ema(beta,r0,m,d,phi_range); % create anonymous fcn for parfor
                     parfor idx_beta = 1:n_beta % loop over joint angles TODO: change back to parfor
                         beta = beta_vec(idx_beta);
-                        [ema_vec(idx_beta),r_tan_vec(idx_beta),~,~] =... % calculate effective moment arm & tangent radius
-                            obj.calc_ema(beta,cam_rad0_tmp,cam_slope_tmp);
-                    end
-                    
-                    linear_displace_vec = zeros(1,n_beta);
-                    for idx_beta = 2:n_beta
-                        r_tan_prev = r_tan_vec(idx_beta-1);
-                        r_tan_cur = r_tan_vec(idx_beta);
-                        linear_displace_vec(idx_beta) = linear_displace_vec(idx_beta-1)... % calculate linear displacement 
-                            + ((r_tan_cur+r_tan_prev)/2)*abs(beta_vec(idx_beta)-beta_vec(idx_beta-1)); 
+                        geom = calc_ema(beta,cam_rad0_tmp,cam_slope_tmp,d,phi_range); % calculate cam geometry
+                        ema_vec(idx_beta) = geom.ema; % add effective moment arm
+                        linear_displace_vec(idx_beta) = geom.l_disp; % add linear joint displacement                         
                     end
             
                     obj.cam_map(key) = {ema_vec, linear_displace_vec}; % update temp cam map
                     
-%                     fprintf('    updated %i of %i cam profiles, %4.1f elapsed\n',...
-%                         idx_sweep, n_sweep, toc)
+                    fprintf('    updated %i of %i cam profiles, %4.1f elapsed\n',...
+                        idx_sweep, n_sweep, toc)
                 end
             end
 %             fprintf('all cam profiles updated, %0.2f s elapsed\n\n', toc)
@@ -243,7 +165,7 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
         end
         
         
-        function ema = get_ema(obj, theta)
+        function [ema, linear_displace] = get_ema(obj, theta, theta0)
             % get effective moment arm at current joint angle
             % (interp/extrap from saved data)
             
@@ -259,36 +181,19 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
 
             cam_data = obj.cam_map(key); % get cam data
             ema_vec = cam_data{1}; % get effective moment arm data
+            linear_displace_vec = cam_data{2};% get linear joint displacement data
             beta_vec = obj.cam_param.beta_vec; % get beta angle data
             
+            beta0 = obj.convert_joint_angle_to_cam_angle(theta0); % convert joint angle to cam angle
             beta = obj.convert_joint_angle_to_cam_angle(theta); % convert joint angle to cam angle
-
             ema = interp1(beta_vec, ema_vec, beta,... % calculate ema at current angle
                 'linear', 'extrap');             
-        end
-        
-
-        function disp = get_joint_displace(obj, theta0, theta_cur)
-            % get joint displacement at current joint angle from initial angle
-            % (interp/extrap from saved data)
-            
-            %DEBUG: trying rounding
-%             key = [num2str(obj.joint_param.rad0),',',num2str(obj.joint_param.slope)]; % map key
-            key = [num2str(round(obj.joint_param.rad0),1), ',', ...
-                num2str(round(obj.joint_param.slope),1)]; % map key
-            
-            cam_data = obj.cam_map(key);
-            linear_displace_vec = cam_data{2};            
-            beta_vec = obj.cam_param.beta_vec;
-            
-            beta0 = obj.convert_joint_angle_to_cam_angle(theta0); % convert joint angle to cam angle
-            beta = obj.convert_joint_angle_to_cam_angle(theta_cur); % convert joint angle to cam angle
-                                        
-            disp0 = interp1(beta_vec, linear_displace_vec, beta0,... % calculate displacement from initial angle to sim starting angle
+                                                    
+            l_disp0 = interp1(beta_vec, linear_displace_vec, beta0,... % calculate displacement from initial angle to sim starting angle
                 'linear', 'extrap'); 
-            disp_cur = interp1(beta_vec, linear_displace_vec,... % calculate displacement from initial angle to current angle
+            l_disp = interp1(beta_vec, linear_displace_vec,... % calculate displacement from initial angle to current angle
                 beta, 'linear', 'extrap');
-            disp = disp0-disp_cur; % switch sign so that positive joint disp corresponds to negative MTU disp
+            linear_displace = l_disp - l_disp0; % switch sign so that positive joint disp corresponds to negative MTU disp 
         end
         
         
@@ -366,10 +271,8 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             for i = 1:length(t_act)
                 muscle_pressure(i) = obj.calc_pres_response(t_act(i),p_max); % get pressure from transient pressure response data (step response)
                 
-                ema(i) = obj.get_ema(theta(i)); % calculate effective moment arm
+                [ema(i), linear_displace(i)] = obj.get_ema(theta(i), theta0); % calculate effective moment arm & displacement
                 
-                linear_displace(i) = obj.get_joint_displace(theta0, theta(i)); % calculate displacement
-
                 [muscle_contract(i), tendon_stretch(i), mtu_force(i)] = ...
                     obj.calcMtuState(muscle_pressure(i), linear_displace(i)); % calculate contraction force & muscle/tendon lengths
 
@@ -455,6 +358,100 @@ classdef MuscleJoint < matlab.mixin.Copyable %handle
             t_peak = t_step(idx_peak);
         end
         
+        
+        function geom = calc_ema(beta, r0, m, d, phi_range)
+            % calculate effective moment arm for cam/joint parameters &
+            % calculate linear joint displacement
+            % units: (rad, cm, cm/rad, cm, rad)
+            persistent phi_sym
+            if isempty(phi_sym)
+                phi_sym = sym('phi_sym');
+            end
+
+            % if no cam profile exists, just return zeros
+            if (r0 == 0) && (m == 0)
+                ema = 0;
+                r_tan = 0;
+                phi = 0;
+                psi = 0;
+                l_cam = 0;
+            else
+                % formulate slopes
+                slope_cam = ( m*cos(beta-phi_sym) + (r0+m*phi_sym)*sin(beta-phi_sym) ) /...
+                    ( (r0+m*phi_sym)*cos(beta-phi_sym) - m*sin(beta-phi_sym) );
+                slope_muscle = -( (r0+m*phi_sym)*cos(beta-phi_sym) ) /...
+                    (-d + (r0+m*phi_sym)*sin(beta-phi_sym) );
+
+                % solve for tangent angle
+                phi_solve = zeros(3,1);
+                phi_solve(1) = max([-100,vpasolve(slope_cam == slope_muscle, phi_sym, deg2rad(0))]);
+                phi_solve(2) = max([-100,vpasolve(slope_cam == slope_muscle, phi_sym, deg2rad(90))]);
+                phi_solve(3) = max([-100,vpasolve(slope_cam == slope_muscle, phi_sym, deg2rad(180))]);
+
+                % filter out negative tangent radii (not physically possible)
+                r_tan_solve = r0 + m*phi_solve; % radius at tangent point
+                idx = r_tan_solve >= 0;
+                phi_solve = phi_solve(idx);
+
+                % remove negative slopes
+                slope_solve = -( (r0+m*phi_solve).*cos(beta-phi_solve) ) ./...
+                    (-d + (r0+m*phi_solve).*sin(beta-phi_solve) );
+                idx = slope_solve >= 0;
+                phi_solve = phi_solve(idx);
+                slope_solve = slope_solve(idx);
+
+                % filter by max slope
+                [~,idx] = max(slope_solve);
+                phi = phi_solve(idx); % cam parameterization angle at tangent point 
+                slope = slope_solve(idx); % slope at tangent point
+
+                % adjust for tangent points outside cam parameterization range
+                if phi < phi_range(1)
+                    phi = phi_range(1);
+                    slope = -( (r0+m*phi)*cos(beta-phi) ) / (-d + (r0+m*phi)*sin(beta-phi) );
+                elseif phi > phi_range(2)
+                    phi = phi_range(2);
+                    slope = -( (r0+m*phi)*cos(beta-phi) ) / (-d + (r0+m*phi)*sin(beta-phi) );
+                end
+
+                % calculate final values
+                r_tan = r0 + m*phi; % radius at tangent point
+                psi = atan(slope); % psi angle
+                ema = d*sin(psi); % effective moment arm
+                
+                % calculate cam displacement length
+                if (m == 0)
+                    l_cam = r0*phi;
+                else
+                    l_cam = (m*log(r0 + sqrt((r0+m*phi)^2 + m^2) + m*phi))/2 + ...
+                        ((r0+m*phi)*sqrt((r0+m*phi)^2 + m^2))/(2*m);
+                end
+            end
+
+            % if no physically possible values found
+            if isempty(ema)
+                ema = 0;
+                r_tan = 0;
+                phi = 0;
+                psi = 0;
+                l_cam = 0;
+            end
+            
+            % calculate muscle length
+            l_musc = sqrt( (-(r0+m*phi)*sin(beta-phi) + d)^2 ... 
+                + ((r0+m*phi)*cos(beta-phi))^2 );
+            
+            % linear displacement: subtract l_disp0 = -(l_cam0 - l_musc0) for relative displacement
+            l_disp = -(l_cam - l_musc); % switch sign so that positive joint disp corresponds to negative MTU disp
+            
+            % add data to return struct
+            geom.ema = ema; % (cm)
+            geom.l_disp = l_disp; % (cm)
+            geom.r_tan = r_tan; % (cm)
+            geom.phi = phi; % (rad)
+            geom.psi = psi; % (rad)
+        end
+
         
         function joint_state_struct = createJointStruct(n_elem)            
             joint_state_struct.muscle_pressure = zeros(n_elem,1);
