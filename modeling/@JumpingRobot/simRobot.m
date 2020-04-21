@@ -38,11 +38,11 @@ function simRobot(obj, sim_param)
         q = x(1:7)';
         qd = x(8:14)';
 
-    %     tic
+%         tic
         % calculate joint torques / joint states
         [tau, j_state] = obj.jointTorque(t,x);
         obj.sim_data.tau(idx_t,:) = tau;
-    %     toc; tic
+%         toc; tic
 
         state_fns = fieldnames(j_state.(joints{1})); % fieldnames of 'joint_state_struct'
         for idx_j = 1:length(joints) % loop over joints
@@ -53,7 +53,7 @@ function simRobot(obj, sim_param)
                     = j_state.(joint).(state_fns{idx_fn});                
             end
         end
-    %     toc; tic
+%         toc; tic
 
         % simulate forward dynamics
         [x_plus,f_plus,err_lim_bool] = obj.forwardDynamicsLcp(q, qd, tau, sim_param.dt);
@@ -63,8 +63,21 @@ function simRobot(obj, sim_param)
         obj.sim_data.x(idx_t,:) = x_plus;
         obj.sim_data.grf.r(idx_t,:) = [f_plus(1), f_plus(3)-f_plus(4)]; % right foot GRFs [normal (x-dir), tangential (y_dir)]
         obj.sim_data.grf.l(idx_t,:) = [f_plus(2), f_plus(5)-f_plus(6)]; % right foot GRFs [normal (x-dir), tangential (y_dir)]
-    %     toc; tic
+%         toc; tic
 
+        % end sim if torso gets to ground
+        obj.sim_data.traj.pos_torso(idx_t,:) = obj.torsoPos(x_plus);
+        if obj.sim_data.traj.pos_torso(idx_t,1) <= -0.1
+            break
+        end
+        
+        % end sim if knees go past 180 deg
+        theta2 = x_plus(4);
+        theta5 = x_plus(7);
+        if (theta2 > pi) || (theta5 > pi)
+            break
+        end
+    
         % calculate center-of-mass velocity %TODO: could do this after sim?
         v_com = obj.comVel(x_plus);
         obj.sim_data.traj.v_com(idx_t,:) = v_com;
@@ -93,21 +106,8 @@ function simRobot(obj, sim_param)
                 break % stop sim if liftoff_stop option turned on
             end
         end
-
-        % end sim if torso gets to ground
-        obj.sim_data.traj.pos_torso(idx_t,:) = obj.torsoPos(x_plus);
-        if obj.sim_data.traj.pos_torso(idx_t,1) <= 0
-            break
-        end
         
-        % end sim if knees go past 180 deg
-        theta2 = x_plus(4);
-        theta5 = x_plus(7);
-        if (theta2 > pi) || (theta5 > pi)
-            break
-        end
-        
-    %     toc;
+%         toc;
     end
     
 end
