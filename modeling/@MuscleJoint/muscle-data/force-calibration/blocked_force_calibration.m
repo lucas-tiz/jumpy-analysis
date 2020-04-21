@@ -102,7 +102,7 @@ dataCellArr0{1}{2}.force = dataCellArr0{1}{2}.force*0;
 
 
 %%
-forceOptens3D.plotView = 1; % 1=3D, 2=len, 3=pres
+forceOptens3D.plotView = 2; % 1=3D, 2=len, 3=pres
 
 if forceOptSens3D.plot == 1
     
@@ -301,7 +301,7 @@ if forceOptSens3D.save == 1
     f7.Units = 'inches';
     f7.Position = figPos;
 %     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
-    export_fig 'force_surface_fit_global.png' -transparent -r600
+    export_fig 'force_vs_length.png' -transparent -r600
 
 end
 
