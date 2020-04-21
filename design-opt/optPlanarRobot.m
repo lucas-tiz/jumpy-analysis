@@ -1,5 +1,7 @@
 %TODO:
 %{
+*global cam_map so that map doesn't have to be copied a bunch?
+
 *normalize inputs
 
 update leg masses to reflect measurements + maybe add artificial torso
@@ -43,15 +45,15 @@ global fullfile_export_opt_params
 
 %% Parameters
 % file names
-config_fname = fullfile(repo_path, 'modeling', 'robot_config_mod.yaml');
+config_fname = fullfile(repo_path, 'modeling', 'robot_config_default.yaml');
 export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
-export_fname = 'class-test'; % name prefix for export files
+export_fname = 'TBD'; % name prefix for export files
 
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
-opt_param.k_tendon_hip = linspace(10, 2000, 10)/1000; % (kN cm) %DEBUG
-opt_param.k_tendon_knee = linspace(10, 2000, 10)/1000; % (kN cm) %DEBUG
+opt_param.k_tendon_hip = linspace(10, 3000, 10)/1000; % (kN cm) %DEBUG
+opt_param.k_tendon_knee = linspace(10, 3000, 10)/1000; % (kN cm) %DEBUG
 opt_param.l_shank = 0.25:0.1:0.55; % (m)
 opt_param.l_thigh = 0.25:0.1:0.55; % (m)
 opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
@@ -60,23 +62,24 @@ opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.t_hip = 0.0:0.1:0.5; % (s)
 opt_param.t_knee = 0.0:0.1:0.5; % (s)
-opt_param.theta0_hip = -45:5:45; % (deg)
+opt_param.theta0_hip = -90:5:90; % (deg)
 opt_param.theta0_knee = 0:10:180; % (deg)
 opt_type = 2;
-rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
+% rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
+rng('shuffle');
 
-% opt_param.k_tendon_hip = 1.28; %37.53;
-% opt_param.k_tendon_knee = 1.11; %61.65;
-% opt_param.l_shank = 0.39; %0.55;
-% opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
-% opt_param.rad_hip = 3.98; %4.80;
-% opt_param.rad_knee = -1.56; %3.40;
-% opt_param.slope_hip = -1.00; %-0.60;
-% opt_param.slope_knee = 3.95; %-0.90;
-% opt_param.t_hip = 0.39; %0.29;
-% opt_param.t_knee = 0.24; %0.27;
-% opt_param.theta0_hip = -36.68;
-% opt_param.theta0_knee = 158.08;
+% opt_param.k_tendon_hip = 1; %0.8009; %37.53;
+% opt_param.k_tendon_knee = 1;%0.10; %1.9989; %61.65;
+% opt_param.l_shank = 0.52; %0.55;
+% opt_param.l_thigh = 0.50; %0.25:0.1:0.55;
+% opt_param.rad_hip = 2; %4.80;
+% opt_param.rad_knee = 0.07; %3.40;
+% opt_param.slope_hip = 3.68; %-0.60;
+% opt_param.slope_knee = 3.40; %-0.90;
+% opt_param.t_hip = 0.20; %0.29;
+% opt_param.t_knee = 0.15; %0.27;
+% opt_param.theta0_hip = -57.82;
+% opt_param.theta0_knee = 153.40;
 % opt_type = 1;
 
 % simulation parameters for design optimization
@@ -85,8 +88,7 @@ sim_param.dt = 1e-3; % (s) delta t
 sim_param.liftoff_stop = 1; % stop simulation at liftoff 
 
 % data export parameters
-export_param.opt_param = 1; % export opt params: 1=export final, 2=export updates
-% export_opt_params = 0; % export opt params: 1=export final, 2=export updates
+export_param.opt_param = 0; % export opt params: 1=export final, 2=export updates
 export_param.sim_data = 0; % export simulation data
 export_param.anim = 0; % export animation to video
 
@@ -112,12 +114,12 @@ v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,15,v,[0,0]); % displa
 
 
 %% Calculate cam data before simulations
-% sweep_arr_knee = combvec(opt_param.rad_knee, opt_param.slope_knee)';
-% sweep_arr_hip = combvec(opt_param.rad_hip, opt_param.slope_hip)';
-% sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1)) & ~isnan(sweep_arr_hip(:,2)),:)];
-% sweep_arr_joint = unique(sweep_arr_joint,'rows'); % sweep vector of just knee/hip cam radius & slope
-% joint = MuscleJoint(robot.config.knee, robot.config.cam); % create dummy joint
-% joint.update_cam_data(sweep_arr_joint); % update cam data
+sweep_arr_knee = combvec(opt_param.rad_knee, opt_param.slope_knee)';
+sweep_arr_hip = combvec(opt_param.rad_hip, opt_param.slope_hip)';
+sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1)) & ~isnan(sweep_arr_hip(:,2)),:)];
+sweep_arr_joint = unique(sweep_arr_joint,'rows'); % sweep vector of just knee/hip cam radius & slope
+joint = MuscleJoint(robot.config.knee, robot.config.cam); % create dummy joint
+joint.update_cam_data(sweep_arr_joint); % update cam data
 
 
 %% Optimization
@@ -132,10 +134,10 @@ optimizer = OptDesign(robot, sim_param, opt_param, export_param);
 % options.Display = 'iter';
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('sa', options);
 
-options.SwarmSize = 2000;
-options.MaxIter = 100;
-options.UseParallel = true;
-[param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
+% options.SwarmSize = 5;%2000;
+% options.MaxIter = 3;%100;
+% options.UseParallel = true;
+% [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
 
 
 %TODO:
@@ -313,6 +315,9 @@ vid.file = [datetime_opt_start, ' - ', export_fname, ' anim']; %'anim_export_tes
 dt = sim_param.dt*5;
 % anim_delay = 0.05;
 robot.animTrajectory(dt,anim_delay,16,vid,[0 sim_param.t_sim]);
+
+
+% robot.animTrajectory(dt,anim_delay,16,vid,[0.15 0.35]);
 
 
 %% Functions
