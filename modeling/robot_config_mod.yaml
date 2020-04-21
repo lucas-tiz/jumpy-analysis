@@ -13,20 +13,19 @@ knee: # knee joint parameters
 hip: # hip joint parameters
   rad0: 2.0
   slope: 0
-  theta_range: [0, 180]
+  theta_range: [-90, 90]
   k_tendon: 50
 
 model: # overall robot model parameters
   joint_order: [knee_right, hip_right, hip_left, knee_left] # order of joints corresponding to below parameters
-  joint_damp: [0.6, 0.8, 0.8, 0.6] # (N-m/rad/s) joint damping
-  joint_damp_lims: [0, 90, 90, 0] # (deg) limits at which joint damping engages TODO: just have damping over entire range? - more realistic
-  joint_stiff: [5, 15, 15, 5] # (Nm/rad) stiffness of antagonistic springs
-  joint_stiff_lims:  [10, 80, 80, 10] # spring engagement starting angle
-  mu: 0.999 # Coulomb foot friction coefficient
+  joint_damp: [0.6, 0.6, 0.6, 0.6] # (N-m/rad/s) joint damping TODO
+  joint_stiff: [5, 15, 15, 5] # (Nm/rad) stiffness of antagonistic springs TODO
+  joint_stiff_lims:  [10, 80, 80, 10] # (deg) spring engagement starting angle TODO
+  mu: 0.9 # Coulomb foot friction coefficient TODO
 
 morphology: # robot morphology [shank_r, thigh_r, torso, thigh_l, shank_l]
-  l: [0.40, 0.30, 0.55, 0.30, 0.40] # (m) link lengths
-  m: [0.31, 0.28, 0.54, 0.28, 0.31] # (kg) robot link masses [0.31, (0.23+0.05), (0.44+2*0.05), (0.23+0.05), 0.31]
+  l: [0.55, 0.55, 0.55, 0.55, 0.55] # (m) link lengths
+  m: [0.31, 0.28, 0.54, 0.28, 0.31] # (kg) robot link masses [0.31, (0.23+0.05), (0.44+2*0.05), (0.23+0.05), 0.31] TODO
   r_cyl: 0.02 # (m) cylinder radius of each link for inertial calcs
   # J: 1/12*m*(3*r_cyl^2 + l^2); # (kg/m^2) # cylinder inertia formula
 
@@ -39,4 +38,4 @@ state0: # initial robot state
 
 control: # control parameters [knee_r, hip_r, hip_l, knee_l]
   p_max: 241.3 # (kPa) max muscle pressure
-  t_musc_activate: [0.0, 0.2, 0.2, 0.0] # (sec) muscle activation timings
+  t_musc_activate: [0.0, 0.0, 0.0, 0.0] # (sec) muscle activation timings
