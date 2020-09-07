@@ -4,13 +4,13 @@ clear, clc
 
 analysis = 1;
 
-cam.d = 54; %30
+cam.d = 30; %30
 cam.phi_range = [0, 180]; %[0, 180]
 cam.beta_range = [-20, 200]; %[-20, 200]
 cam.beta_inc = 10; %10
 
-knee.rad0 = 6; %0
-knee.slope = -1; %6
+knee.rad0 = 3; %0
+knee.slope = 1; %6
 knee.theta_range = [180, 0]; %[180, 0]
 knee.k_tendon = 250;
 
@@ -20,13 +20,13 @@ joint = MuscleJoint(knee, cam);
 %% Plot cam-muscle geometry
 analysis = 1
 if analysis == 1
-    beta = deg2rad(0); % (rad) joint angle
+    beta = deg2rad(225); % (rad) joint angle
     
     geom = joint.calc_ema(beta, knee.rad0, knee.slope, cam.d, deg2rad(cam.phi_range)); 
     double(rad2deg(geom.phi))
     fprintf('r_tan: %4.2f, ema: %4.2f\n', geom.r_tan, geom.ema)
     
-    plotCam(beta, cam, knee, geom)    
+    plotCam(beta, cam, knee, geom) 
 end
 
 
@@ -259,12 +259,12 @@ function plotCam(beta, cam, knee, geom)
     f = figure(543); clf
     f.Position = [139, 370, 990, 530];
     hold on
-    grid on
+%     grid on
     axis equal
-%     set(gca,'visible','off')
+    set(gca,'visible','off')
     colors = get(gca, 'colororder');    
-    xlim([-10 10])
-    ylim([-10 10])
+%     xlim([-10 10])
+%     ylim([-10 10])
     lwidth_hardware = 2.5;
     lwidth_line = 1.25;
 
