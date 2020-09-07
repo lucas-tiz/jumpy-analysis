@@ -22,7 +22,7 @@ option for turning on/off cam param rounding
 % Design optimization of robot
 clear
 clear global
-clc
+% clc
 
 repo_folder = 'jumpy-analysis';
 current_path = pwd;
@@ -45,9 +45,9 @@ global fullfile_export_opt_params
 
 %% Parameters
 % file names
-config_fname = fullfile(repo_path, 'modeling', 'robot_config_default.yaml');
+config_fname = fullfile(repo_path, 'modeling', 'robot_config_mod.yaml');
 export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
-export_fname = 'TBD'; % name prefix for export files
+export_fname = 'TEST'; % name prefix for export files
 
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
@@ -62,30 +62,32 @@ opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.t_hip = 0.0:0.1:0.5; % (s)
 opt_param.t_knee = 0.0:0.1:0.5; % (s)
-opt_param.theta0_hip = -90:5:90; % (deg)
+opt_param.theta0_hip = -90:10:90; % (deg)
 opt_param.theta0_knee = 0:10:180; % (deg)
 opt_type = 2;
 % rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
 rng('shuffle');
 
-% opt_param.k_tendon_hip = 1; %0.8009; %37.53;
-% opt_param.k_tendon_knee = 1;%0.10; %1.9989; %61.65;
-% opt_param.l_shank = 0.52; %0.55;
-% opt_param.l_thigh = 0.50; %0.25:0.1:0.55;
-% opt_param.rad_hip = 2; %4.80;
-% opt_param.rad_knee = 0.07; %3.40;
-% opt_param.slope_hip = 3.68; %-0.60;
-% opt_param.slope_knee = 3.40; %-0.90;
-% opt_param.t_hip = 0.20; %0.29;
-% opt_param.t_knee = 0.15; %0.27;
-% opt_param.theta0_hip = -57.82;
-% opt_param.theta0_knee = 153.40;
-% opt_type = 1;
+											
+opt_param.k_tendon_hip = 0.1; %0.8009; %37.53;
+opt_param.k_tendon_knee = 0.1;%0.10; %1.9989; %61.65;
+opt_param.l_shank = 0.55; %0.55;
+opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
+opt_param.rad_hip = 4; %4.80;
+opt_param.rad_knee = 4; %3.40;
+opt_param.slope_hip = 0; %-0.60;
+opt_param.slope_knee = 0; %-0.90;
+opt_param.t_hip = 0.0;%0.26; %0.29;
+opt_param.t_knee = 0.0;%0.35; %0.27;
+opt_param.theta0_hip = -60;
+opt_param.theta0_knee = 158;
+opt_type = 1;
 
 % simulation parameters for design optimization
 sim_param.t_sim = 1; % (s) simulation time
-sim_param.dt = 1e-3; % (s) delta t
+sim_param.dt = 1e-3; % (s) 1e-3 delta t
 sim_param.liftoff_stop = 1; % stop simulation at liftoff 
+sim_param.n_tube_seg = 3; % number of tube discretization segments
 
 % data export parameters
 export_param.opt_param = 0; % export opt params: 1=export final, 2=export updates
@@ -109,21 +111,22 @@ export_param.fullfile_opt_param = fullfile_export_opt_params; %TODO
 
 
 %% Instantiate robot
-robot = JumpingRobot(config_fname); % instantiate
-v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,15,v,[0,0]); % display model in initial state
+robot = JumpingRobot(config_fname, sim_param); % instantiate
+v.export = 0; robot.animTrajectory(0.01,anim_delay,16,v,[0,0]); % display model in initial state
 
 
 %% Calculate cam data before simulations
 sweep_arr_knee = combvec(opt_param.rad_knee, opt_param.slope_knee)';
 sweep_arr_hip = combvec(opt_param.rad_hip, opt_param.slope_hip)';
-sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1)) & ~isnan(sweep_arr_hip(:,2)),:)];
-sweep_arr_joint = unique(sweep_arr_joint,'rows'); % sweep vector of just knee/hip cam radius & slope
-joint = MuscleJoint(robot.config.knee, robot.config.cam); % create dummy joint
+sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1))...
+    & ~isnan(sweep_arr_hip(:,2)),:)]; % sweep vector of knee/hip cam radius & slope
+sweep_arr_joint = unique(sweep_arr_joint,'rows'); % get unique rows
+joint = MuscleJoint(robot.config.knee, robot.config.cam, robot.config.pneumatic); % create dummy joint
 joint.update_cam_data(sweep_arr_joint); % update cam data
 
 
 %% Optimization
-optimizer = OptDesign(robot, sim_param, opt_param, export_param);
+optimizer = OptDesign(robot, opt_param, export_param);
 
 
 % options.MaxIter = 3;
@@ -201,7 +204,7 @@ if opt_type == 1
         optimizer.updateOptParams(robot_i, sweep_arr(idx_opt,:)); % update parameters
 %         updateOptParams(robot_i, sweep_arr(idx_opt,:), opt_param); % update parameters
 
-        robot_i.simRobot(sim_param); % simulate
+        robot_i.simRobot(); % simulate
 
         opt_res_arr(idx_opt,:) = [robot_i.sim_data.info_aerial.t,... 
             robot_i.sim_data.info_aerial.v(1)]; % save velocity
@@ -230,65 +233,65 @@ if opt_type == 1
 end
 
 
-% genetic algorithm
-if opt_type == 3    
-    fn = sort(fieldnames(opt_param));
-    n_fn = numel(fn);
-    lb = zeros(n_fn,1);
-    ub = zeros(n_fn,1);
-    idx_discrete = [];
-    for idx_fn = 1:n_fn
-        if any(strcmp(fn{idx_fn}, opt_param_discrete)) % if discretized param
-            lb(idx_fn) = 1;
-            ub(idx_fn) = length(opt_param.(fn{idx_fn}));
-            idx_discrete = [idx_discrete, idx_fn];
-        else % if continuous param
-            lb(idx_fn) = min(opt_param.(fn{idx_fn}));
-            ub(idx_fn) = max(opt_param.(fn{idx_fn}));
-        end
-    end
-    
-    %TODO:
-    %{
-    - change elite count
-    - change crossover fraction
-    - crossover function: heuristic? arithemtic? etc.
-    %}
-    
-    opts = optimoptions(@ga, ...
-        'PopulationSize', 5, ... %20000
-        'MaxGenerations', 3, ... %10
-        'EliteCount', 2, ... %0.05*20000
-        'FunctionTolerance', 1e-8, ...
-        'PlotFcn', @gaplotbestf, ...
-        'OutputFcn', @(options,state,flag)gaOutputFcn(options,state,flag,...
-            opt_param, opt_param_discrete),...
-        'UseParallel', true);
-    
-    objFun = @(param_vec)gaObjFcn(param_vec, robot, sim_param, opt_param,...
-        opt_param_discrete);
-                                        
-    [xbest, fbest, exitflag] = ga(objFun, n_fn, [], [], [], [], ...
-        lb, ub, [], idx_discrete, opts);
-    
-    param_vec_optimal = camMapVars(xbest, opt_param, opt_param_discrete);
-    
-    if export_opt_params == 1
-        exportOptParams(nan, nan,...
-            -fbest, param_vec_optimal)
-    end
-end
+% % genetic algorithm
+% if opt_type == 3    
+%     fn = sort(fieldnames(opt_param));
+%     n_fn = numel(fn);
+%     lb = zeros(n_fn,1);
+%     ub = zeros(n_fn,1);
+%     idx_discrete = [];
+%     for idx_fn = 1:n_fn
+%         if any(strcmp(fn{idx_fn}, opt_param_discrete)) % if discretized param
+%             lb(idx_fn) = 1;
+%             ub(idx_fn) = length(opt_param.(fn{idx_fn}));
+%             idx_discrete = [idx_discrete, idx_fn];
+%         else % if continuous param
+%             lb(idx_fn) = min(opt_param.(fn{idx_fn}));
+%             ub(idx_fn) = max(opt_param.(fn{idx_fn}));
+%         end
+%     end
+%     
+%     %TODO:
+%     %{
+%     - change elite count
+%     - change crossover fraction
+%     - crossover function: heuristic? arithemtic? etc.
+%     %}
+%     
+%     opts = optimoptions(@ga, ...
+%         'PopulationSize', 5, ... %20000
+%         'MaxGenerations', 3, ... %10
+%         'EliteCount', 2, ... %0.05*20000
+%         'FunctionTolerance', 1e-8, ...
+%         'PlotFcn', @gaplotbestf, ...
+%         'OutputFcn', @(options,state,flag)gaOutputFcn(options,state,flag,...
+%             opt_param, opt_param_discrete),...
+%         'UseParallel', true);
+%     
+%     objFun = @(param_vec)gaObjFcn(param_vec, robot, sim_param, opt_param,...
+%         opt_param_discrete);
+%                                         
+%     [xbest, fbest, exitflag] = ga(objFun, n_fn, [], [], [], [], ...
+%         lb, ub, [], idx_discrete, opts);
+%     
+%     param_vec_optimal = camMapVars(xbest, opt_param, opt_param_discrete);
+%     
+%     if export_opt_params == 1
+%         exportOptParams(nan, nan,...
+%             -fbest, param_vec_optimal)
+%     end
+% end
 
 
 %% Simulate optimal config
 fprintf('\nsimulating optimal config\n')
-sim_param.t_sim = 2;
-% sim_param.dt = 5e-4;
-sim_param.liftoff_stop = 0;
+robot.sim_param.t_sim = 1;
+robot.sim_param.dt = 5e-4;
+robot.sim_param.liftoff_stop = 0;
 
 optimizer.updateOptParams(robot, param_vec_optimal); % update parameters
 v.export = 0; robot.animTrajectory(sim_param.dt,anim_delay,15,v,[0,0]); % display model in initial state
-robot.simRobot(sim_param);
+robot.simRobot();
 robot.calcJumpTrajectory();
 fprintf('optimized jump height: %0.3f\n', robot.sim_data.info_jump.height)
 
@@ -312,9 +315,9 @@ vid.export = export_param.anim;
 vid.path =  fullfile(export_path, 'anim');
 vid.file = [datetime_opt_start, ' - ', export_fname, ' anim']; %'anim_export_test_17'; % animation video file name
 
-dt = sim_param.dt*5;
+dt = robot.sim_param.dt*5;
 % anim_delay = 0.05;
-robot.animTrajectory(dt,anim_delay,16,vid,[0 sim_param.t_sim]);
+robot.animTrajectory(dt,anim_delay,21,vid,[0 robot.sim_param.t_sim]);
 
 
 % robot.animTrajectory(dt,anim_delay,16,vid,[0.15 0.35]);
@@ -402,44 +405,44 @@ function  updateOptParams(robot, param_vec, opt_param)
 end
 
 
-function cost = gaObjFcn(param_vec, robot, sim_param, opt_param,...
-    opt_param_discrete)
-    % function to minimize: returns negative vertical velocity at liftoff
-    
-    robot_i = copy(robot); % create copy of robot
-    param_vec = camMapVars(param_vec, opt_param, opt_param_discrete);
-    updateOptParams(robot_i, param_vec, opt_param); % update parameters
-    
-    robot_i.simRobot(sim_param);
-    
-    cost = -robot_i.sim_data.info_aerial.v(1); % negative vertical velocity
-end
-
-
-function [state,options,optchanged] = gaOutputFcn(options,state,~,opt_param,...
-    opt_param_discrete)
-    global t_comp0
-    global export_opt_params
-    
-    [v_vert_neg, idx] = min(state.Score); % get best of population
-    param_vec = camMapVars(state.Population(idx,:), opt_param,...
-        opt_param_discrete); % get corresponding params
-
-    fprintf('\ntotal elapsed time: %s h:m:s\n', datestr(now-t_comp0,13))    
-    fprintf('velocity (y): %0.3f m/s\n', -v_vert_neg)
-    fprintf('optimal params:\n')
-    fn = sort(fieldnames(opt_param));
-    n_fn = numel(fn);
-    for idx_fn = 1:n_fn
-        fprintf('    %s:  %0.2f\n', fn{idx_fn}, param_vec(idx_fn));
-    end
-
-    if export_opt_params == 2            
-        exportOptParams(state.Generation, nan, -v_vert_neg, param_vec)
-    end     
-    
-    optchanged = false;
-end
+% function cost = gaObjFcn(param_vec, robot, sim_param, opt_param,...
+%     opt_param_discrete)
+%     % function to minimize: returns negative vertical velocity at liftoff
+%     
+%     robot_i = copy(robot); % create copy of robot
+%     param_vec = camMapVars(param_vec, opt_param, opt_param_discrete);
+%     updateOptParams(robot_i, param_vec, opt_param); % update parameters
+%     
+%     robot_i.simRobot(sim_param);
+%     
+%     cost = -robot_i.sim_data.info_aerial.v(1); % negative vertical velocity
+% end
+% 
+% 
+% function [state,options,optchanged] = gaOutputFcn(options,state,~,opt_param,...
+%     opt_param_discrete)
+%     global t_comp0
+%     global export_opt_params
+%     
+%     [v_vert_neg, idx] = min(state.Score); % get best of population
+%     param_vec = camMapVars(state.Population(idx,:), opt_param,...
+%         opt_param_discrete); % get corresponding params
+% 
+%     fprintf('\ntotal elapsed time: %s h:m:s\n', datestr(now-t_comp0,13))    
+%     fprintf('velocity (y): %0.3f m/s\n', -v_vert_neg)
+%     fprintf('optimal params:\n')
+%     fn = sort(fieldnames(opt_param));
+%     n_fn = numel(fn);
+%     for idx_fn = 1:n_fn
+%         fprintf('    %s:  %0.2f\n', fn{idx_fn}, param_vec(idx_fn));
+%     end
+% 
+%     if export_opt_params == 2            
+%         exportOptParams(state.Generation, nan, -v_vert_neg, param_vec)
+%     end     
+%     
+%     optchanged = false;
+% end
 
 
 function param_vec = camMapVars(param_vec_disc, opt_param, opt_param_discrete)
