@@ -1,18 +1,20 @@
-function simRobot(obj, sim_param)
+function simRobot(obj)
     % Simulate robot: LCP
 
     % initialize
-    obj.sim_data.t = 0:sim_param.dt:sim_param.t_sim;
+    obj.sim_data.t = 0:obj.sim_param.dt:obj.sim_param.t_sim;
     n_time = length(obj.sim_data.t);
     obj.sim_data.tau = zeros(n_time,7);
     obj.sim_data.x = zeros(n_time,14);
     obj.sim_data.grf.r = zeros(n_time,2);
     obj.sim_data.grf.l = zeros(n_time,2);
+    obj.sim_data.m_source = zeros(n_time,1);
+    obj.sim_data.p_source = zeros(n_time,1);
     
     joints = obj.config.model.joint_order;
-    for i = 1:length(joints)
-        obj.sim_data.j_state.(joints{i}) = ...
-            MuscleJoint.createJointStruct(n_time);
+    for idx_j = 1:length(joints)
+        obj.sim_data.joints.(joints{idx_j}) = ...
+            MuscleJoint.createJointStateStruct(n_time);
     end
    
     obj.sim_data.info_aerial.t = NaN;
@@ -25,38 +27,55 @@ function simRobot(obj, sim_param)
     aerial.l = 0;
     aerial.state = 0; % 0=ground, 1=aerial
     
-    % set values for t = 0
+    % set values for t = 0 TODO: do for all initial values
     obj.sim_data.x(1,:) = obj.state.x0;
     obj.sim_data.traj.pos_torso(1,:) = obj.torsoPos(obj.state.x0);
 
+    states = fieldnames(obj.joints.(joints{1}).state); % fieldnames of 'joint.state'
+    for idx_j = 1:length(joints) % loop over joints
+        j = joints{idx_j}; % joint name
+        for idx_s = 1:numel(states) % loop over joint states
+            s = states{idx_s}; % state name
+            obj.sim_data.joints.(j).(s)(1) = obj.joints.(j).state.(s);
+        end
+    end
+    
+    
     % simulate over time vector
     for idx_t = 2:length(obj.sim_data.t)
 
-        % get current state
-        t = obj.sim_data.t(idx_t);
-        x = obj.sim_data.x(idx_t-1,:);
+        % get state
+        t = obj.sim_data.t(idx_t); % current time
+        x = obj.sim_data.x(idx_t-1,:); % previous state
         q = x(1:7)';
         qd = x(8:14)';
+        
+%         fprintf('%0.4f \n', t) %DEBUG
 
+        % update pressures (integrate pressure dynamics)
+        obj.updateGasSource();
+        obj.sim_data.m_source(idx_t,1) = obj.state.m_source;
+        obj.sim_data.p_source(idx_t,1) = obj.state.p_source;
+        
 %         tic
         % calculate joint torques / joint states
-        [tau, j_state] = obj.jointTorque(t,x);
+        [tau] = obj.updateTorques(t,x);
         obj.sim_data.tau(idx_t,:) = tau;
 %         toc; tic
 
-        state_fns = fieldnames(j_state.(joints{1})); % fieldnames of 'joint_state_struct'
+        states = fieldnames(obj.joints.(joints{1}).state); % fieldnames of 'joint.state'
         for idx_j = 1:length(joints) % loop over joints
-            joint = joints{idx_j}; % joint name
+            j = joints{idx_j}; % joint name
             
-            for idx_fn = 1:numel(state_fns) % loop over struct fieldnames
-                obj.sim_data.j_state.(joint).(state_fns{idx_fn})(idx_t) ...
-                    = j_state.(joint).(state_fns{idx_fn});                
+            for idx_s = 1:numel(states) % loop over joint states
+                s = states{idx_s}; % state name
+                obj.sim_data.joints.(j).(s)(idx_t) = obj.joints.(j).state.(s);
             end
         end
 %         toc; tic
 
-        % simulate forward dynamics
-        [x_plus,f_plus,err_lim_bool] = obj.forwardDynamicsLcp(q, qd, tau, sim_param.dt);
+        % integrate robot dynamics
+        [x_plus,f_plus,err_lim_bool] = obj.forwardDynamicsLcp(q, qd, tau);
         if err_lim_bool == 1
             break
         end
@@ -67,7 +86,7 @@ function simRobot(obj, sim_param)
 
         % end sim if torso gets to ground
         obj.sim_data.traj.pos_torso(idx_t,:) = obj.torsoPos(x_plus);
-        if obj.sim_data.traj.pos_torso(idx_t,1) <= -0.1
+        if obj.sim_data.traj.pos_torso(idx_t,1) <= 0.0
             break
         end
         
@@ -102,7 +121,7 @@ function simRobot(obj, sim_param)
             obj.sim_data.info_aerial.v = obj.sim_data.traj.v_com(idx_t,:); % save liftoff velocity
             aerial.state = 1; % set robot aerial state to true
 
-            if sim_param.liftoff_stop == 1
+            if obj.sim_param.liftoff_stop == 1
                 break % stop sim if liftoff_stop option turned on
             end
         end
