@@ -1,4 +1,8 @@
 classdef JumpingRobot < matlab.mixin.Copyable
+    properties
+        % read-write properties
+        sim_param
+    end
     
     properties (SetAccess = private)
         % read-only properties
@@ -14,13 +18,16 @@ classdef JumpingRobot < matlab.mixin.Copyable
     properties (Access = private)
         % private properties
         spatialRobot
+        
+%         musc_vol_curvefit TODO: not needed
     end
        
     
     methods
         % Prototypes
-        simRobot(obj, sim_param)
-        [tau, joint_state] = jointTorque(obj,t,x)
+        simRobot(obj)
+        updateGasSource(obj)
+        tau = updateTorques(obj,t,x)
         [x,pos_constraint,err_lim_bool] = forwardDynamicsLcp(obj, q, qd, tau, dt)
         foot_pos = footPos(obj, x)
         v_com = comVel(obj,x)
@@ -32,7 +39,7 @@ classdef JumpingRobot < matlab.mixin.Copyable
         exportSimData(obj, fullfile_export)
  
 
-        function obj = JumpingRobot(config_file)
+        function obj = JumpingRobot(config_file, sim_param)
             % Constructor
             obj.repo_path = obj.get_repo_path(); % set repo path
          
@@ -45,27 +52,21 @@ classdef JumpingRobot < matlab.mixin.Copyable
             obj.config.morphology = morphology;
             
             % create knee & hip joints %TODO: just use copy function?
-            obj.joints.knee_right = MuscleJoint(obj.config.knee, obj.config.cam);
-            obj.joints.knee_left = MuscleJoint(obj.config.knee, obj.config.cam);
-            obj.joints.hip_right = MuscleJoint(obj.config.hip, obj.config.cam);
-            obj.joints.hip_left = MuscleJoint(obj.config.hip, obj.config.cam);
+            obj.joints.knee_right = MuscleJoint(obj.config.knee, obj.config.cam, ...
+                obj.config.pneumatic);
+            obj.joints.knee_left = MuscleJoint(obj.config.knee, obj.config.cam, ...
+                obj.config.pneumatic);
+            obj.joints.hip_right = MuscleJoint(obj.config.hip, obj.config.cam, ...
+                obj.config.pneumatic);
+            obj.joints.hip_left = MuscleJoint(obj.config.hip, obj.config.cam, ...
+                obj.config.pneumatic);
 
-            % create state
-%             theta2 = obj.config.state0.q0(2);
-%             theta3 = obj.config.state0.q0(3);
-%             theta1 = pi/2 - deg2rad(theta2 + theta3);
-%             obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
-%                             0, 0, deg2rad(obj.config.state0.qd0)];
-%             
-%             
             % create initial state vector, update inital robot pose, and
             % initialize 'sim_data'
-            obj.updateInitialState();
-% 
-%             % initialize simulation time %TODO: replace 'sim_data' with 'traj'?
-% 
-%             obj.sim_data.t = 0; %TODO: only for anim? maybe just have option for [] in anim
-%             obj.sim_data.x = obj.state.x0;
+            obj.initializeState();
+            
+            % add simulation parameters
+            obj.sim_param = sim_param;            
         end
         
         
@@ -74,6 +75,26 @@ classdef JumpingRobot < matlab.mixin.Copyable
             class_path = which('JumpingRobot');
             idx_repo = strfind(class_path, obj.repo_folder);
             repo_path = class_path(1:(idx_repo-1 + length(obj.repo_folder)));
+        end
+        
+        
+        function initializeState(obj)
+            % Initialize state vector & robot pose; initialize 'sim_data'
+            theta2 = obj.config.state0.q0(2);
+            theta3 = obj.config.state0.q0(3);
+            theta1 = pi/2 - deg2rad(theta2 + theta3); % ground-shank joint angle calc for symmetric frame & level torso
+            obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
+                            0, 0, deg2rad(obj.config.state0.qd0)];
+                        
+            Rs = 287.058; % (J/(kg K))
+            T = 298; % (K)
+            obj.state.p_source = (obj.config.pneumatic.p_source0+14.7)*6.89476; % (psi to kPa) source pressure
+            obj.state.m_source = ((obj.state.p_source*1000)*...
+                (obj.config.pneumatic.v_source*0.001))/(Rs*T); % (kg) source mass
+                        
+            %TODO: replace 'sim_data' with 'traj'?
+            obj.sim_data.x = obj.state.x0; % this allows for plotting of initial pose
+            obj.sim_data.t = 0; % this allows for plotting of initial pose
         end
         
                 
@@ -116,24 +137,10 @@ classdef JumpingRobot < matlab.mixin.Copyable
                 end
                    
                 % update initial state (reset 'sim_data')
-                obj.updateInitialState();                
+                obj.initializeState();                
             end
         end
 
-        
-        function updateInitialState(obj)
-            % Update initial state vector & robot pose, and initialize 'sim_data'
-            theta2 = obj.config.state0.q0(2);
-            theta3 = obj.config.state0.q0(3);
-            theta1 = pi/2 - deg2rad(theta2 + theta3); % ground-shank joint angle calc for symmetric frame & level torso
-            obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
-                            0, 0, deg2rad(obj.config.state0.qd0)];
-            
-            %TODO: replace 'sim_data' with 'traj'?
-            obj.sim_data.x = obj.state.x0; % this allows for plotting of initial pose
-            obj.sim_data.t = 0; % this allows for plotting of initial pose
-        end
-        
         
         function calcJumpTrajectory(obj)
             % calculate jump trajectory
