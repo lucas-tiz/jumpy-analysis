@@ -19,6 +19,9 @@ f.path = fullfile(repo_path, 'modeling', '@MuscleJoint', 'muscle-data',...
 % test setup
 testArr =   [5 ,10,15,20,25,30,35,40,45,50;  % test pressures (psi)
              1 ,1 ,1 ,1 ,1 ,1 ,1 ,1 ,1 ,1 ]; % corresponding test numbers
+         
+testArr =   [50;  % test pressures (psi)
+             1]; % corresponding test numbers
 
 % mcu data parameters
 timeStart = 20; % (s) mcu start time
@@ -28,7 +31,7 @@ timeStart = 20; % (s) mcu start time
 save_surffit = 0;
 
 % plots
-forceOptens3D.plotView = 1; % 1=3D, 2=len, 3=pres
+forceOptens3D.plotView = 2; % 1=3D, 2=len, 3=pres
 forceOptSens3D.plot = 1;
 forceOptSens3D.save = 0;
 
@@ -37,7 +40,8 @@ forceOptSens3D.save = 0;
 f.mcu = 'mcu data'; % microcontroller data folder
 f.ins = 'instron data'; % instron data folder
 dataCellArr = cell(1,length(testArr));
-nPressures = length(testArr); % number of test pressures
+nPressures = size(testArr); % number of test pressures
+nPressures = nPressures(2);
 nPoints = 0; % initialize number of total data points
 
 
@@ -301,7 +305,7 @@ if forceOptSens3D.save == 1
     f7.Units = 'inches';
     f7.Position = figPos;
 %     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
-    export_fig 'force_vs_length.png' -transparent -r600
+%     export_fig 'force_vs_length.png' -transparent -r600
 
 end
 
