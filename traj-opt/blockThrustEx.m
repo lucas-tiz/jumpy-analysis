@@ -61,7 +61,7 @@ pub_figureFormat(f, 'CMU Serif')
 set(f, 'Position', [-853, 405, 450, 450])
 
 filepath = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Thesis\proposal\diagrams\logistic smoothing';
-print(fullfile(filepath, 'steep plot2'), '-dpng', '-r600')
+% print(fullfile(filepath, 'steep plot2'), '-dpng', '-r600')
 
 
 %% block powered by PAM "thrusters", one in +y direction, one in -y direction
@@ -222,38 +222,66 @@ end
 
 
 %% plot
+alpha_log = 500;
+u_inf = logistic(t, 1, t1, alpha_log) - logistic(t, 1, t2, alpha_log);
+u_seal = logistic(t, 1, t2, alpha_log) - logistic(t, 1, t3, alpha_log);
+u_def = logistic(t, 1, t3, alpha_log);
+
 linewidth = 1.5;
 
 f1 = figure(1); clf
 subplot(1,3,1)
 hold on
 grid on
-plot(t, y_inf, 'LineWidth', linewidth)
+h = plot(t, y_inf, 'LineWidth', linewidth);
+ylims = get(gca, 'YLim');
+ylim(ylims)
+% xlim([0 t(end)])
+plot(t,u_inf*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.4);
+plot(t,u_seal*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.6);
+plot(t,u_def*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.8);
 % plot(t_sim, x_sim(:,1), '--')
 xlabel('Time (s)')
 ylabel('Position')
+uistack(h, 'top')
 
 subplot(1,3,2)
 hold on
 grid on
-plot(t, vy, 'LineWidth', linewidth)
+h = plot(t, vy, 'LineWidth', linewidth);
+ylims = get(gca, 'YLim');
+ylim(ylims)
+% xlim([0 t(end)])
+plot(t,u_inf*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.4);
+plot(t,u_seal*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.6);
+plot(t,u_def*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.8);
 % plot(t_sim, x_sim(:,2), '--')
 xlabel('Time (s)')
 ylabel('Velocity')
+uistack(h, 'top')
 
 subplot(1,3,3)
 hold on
 grid on
-plot(t, u1, 'LineWidth', linewidth)
+h = plot(t, u1, 'LineWidth', linewidth);
+% ylims = get(gca, 'YLim');
+ylims = [0, 30];
+ylim(ylims)
+% xlim([0 t(end)])
+plot(t,u_inf*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.4);
+plot(t,u_seal*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.6);
+plot(t,u_def*(ylims(2)-ylims(1))*0.25+ylims(1), 'LineWidth', 1.25, 'Color', [1,1,1]*0.8);
 % plot(t, u2, 'LineWidth', linewidth)
 xlabel('Time (s)')
 ylabel('Thrust (pressure)')
 % legend('u_1', 'u_2')
-ylim([0 30])
+uistack(h, 'top')
 
 pub_figureFormat(f1, 'CMU Serif')
-f1.Position = [-1100, 425, 1025, 375];
+f1.Position = [340, 365, 1025, 375];
 
+filepath = 'C:\Users\Lucas\Dropbox (GaTech)\Research\Thesis\proposal\diagrams';
+print(fullfile(filepath, 'block_thrust_traj_opt'), '-dpng', '-r300')
 
 
 %% nonlinear constraints
