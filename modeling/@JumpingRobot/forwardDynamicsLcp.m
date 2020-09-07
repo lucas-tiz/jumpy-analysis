@@ -1,9 +1,11 @@
-function [x,f,err_lim_bool] = forwardDynamicsLcp(obj, q, qd, tau, dt)
+function [x,f,err_lim_bool] = forwardDynamicsLcp(obj, q, qd, tau)
     % Calculate forward dynamics using position-based LCP approach
     %TODO: in the future, generalize this for any robot (pass in contact
     %Jacobians, position constraint function, etc
 
     l = obj.config.morphology.l;
+    mu = obj.config.model.mu;
+    dt = obj.sim_param.dt;
         
     m = 3; % DOF of system
     p = 2; % number of contacts
@@ -76,7 +78,7 @@ function [x,f,err_lim_bool] = forwardDynamicsLcp(obj, q, qd, tau, dt)
 %                  zeros(p,1)];
         A = [N'*(M\N), N'*(M\B), zeros(p,p);
              B'*(M\N), B'*(M\B), 1/dt*E;
-             obj.config.model.mu*eye(p), -E', zeros(p,p)];
+             mu*eye(p), -E', zeros(p,p)];
         q_lcp = [1/(dt^2)*(N'*q + dt*N'*(M\tau_star) - alpha0);
                  1/dt*(B'*(M\tau_star));
                  zeros(p,1)];
