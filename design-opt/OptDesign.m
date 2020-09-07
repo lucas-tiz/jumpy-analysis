@@ -1,7 +1,6 @@
 classdef OptDesign %< matlab.mixin.Copyable
     
     properties 
-        sim_param % jump simulation parameters
         opt_param % robot optimization parameters
         export_param % optimization data export parameters
         objective_offset = 10; % objective function offset value 
@@ -16,9 +15,8 @@ classdef OptDesign %< matlab.mixin.Copyable
 
     
     methods
-        function obj = OptDesign(robot, sim_param, opt_param, export_param)
+        function obj = OptDesign(robot, opt_param, export_param)
             obj.robot = copy(robot); % add a copy of the robot
-            obj.sim_param = sim_param;
             obj.opt_param = opt_param;
             obj.export_param = export_param;
             
@@ -309,7 +307,7 @@ classdef OptDesign %< matlab.mixin.Copyable
             robot_copy = copy(obj.robot); % create copy of robot
             obj.updateOptParams(robot_copy, param_vec); % update parameters
 %             toc
-            robot_copy.simRobot(obj.sim_param);
+            robot_copy.simRobot();
             cost = obj.objective_offset - robot_copy.sim_data.info_aerial.v(1);
         end %x
 
