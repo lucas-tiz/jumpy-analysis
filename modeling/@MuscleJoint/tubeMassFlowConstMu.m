@@ -2,15 +2,15 @@ function mdot_tube = tubeMassFlowConstMu(obj, p1, p2) %, l_tube, d_tube, eps_tub
 
     p1 = p1*1e3; % (kPa to Pa) source pressure 
     p2 = p2*1e3; % (kPa to Pa) muscle pressure
+    
+    L = obj.pneu_param.l_tube_valve_musc*0.0254; % (in to m) tube length
+    D = obj.pneu_param.d_tube_valve_musc*0.0254; % (in to m) tube inner diameter
+    eps = obj.pneu_param.eps_tube; % (m) tube surface roughness    
+    mu = interp1(obj.gas_props.pres, obj.gas_props.mu, (p2+p1)/2*1e-6, ...
+        'makima'); % (Pa*s) average viscosity of air in tube (pressure in MPa)
+    k = obj.gas_props.k; % (Pa-m3/kg) Rs*T
 
-    %TODO: bring these in from config............................
-    L = 48*0.0254; % (in to m)
-    D = 3/16*0.0254; % (in to m) diameter
-    eps = 15e-6; % (m) tube surface roughness
-    mu = 1.7719e-05; % (Pa-s)
-    k = 1/8.7896e4; % (Pa-m3/kg) Rs*T
-
-
+    
     %%
     s = pi*(D/2)^2;
 
