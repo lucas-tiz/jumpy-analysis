@@ -1,25 +1,20 @@
 classdef JumpingRobot < matlab.mixin.Copyable
-    properties
-        % read-write properties
+    properties % read-write properties
         sim_param
     end
     
-    properties (SetAccess = private)
-        % read-only properties
+    properties (SetAccess = private) % read-only properties
         repo_folder = 'jumpy-analysis';
         repo_path
-        
         config
+        gas_props
         joints
-       
         state
         sim_data
     end
-    properties (Access = private)
-        % private properties
+    
+    properties (Access = private) % private properties
         spatialRobot
-        
-%         musc_vol_curvefit TODO: not needed
     end
        
     
@@ -45,6 +40,9 @@ classdef JumpingRobot < matlab.mixin.Copyable
          
             % read YAML configuration file
             obj.config = ReadYaml(config_file);
+            
+            % load gas property data
+            obj.loadGasProps();
                         
             % create RBDA struct for library - separate function
             [model, morphology] = obj.buildSpatialRobot(obj.config.morphology);
@@ -53,13 +51,13 @@ classdef JumpingRobot < matlab.mixin.Copyable
             
             % create knee & hip joints %TODO: just use copy function?
             obj.joints.knee_right = MuscleJoint(obj.config.knee, obj.config.cam, ...
-                obj.config.pneumatic);
+                obj.config.pneumatic, obj.gas_props);
             obj.joints.knee_left = MuscleJoint(obj.config.knee, obj.config.cam, ...
-                obj.config.pneumatic);
+                obj.config.pneumatic, obj.gas_props);
             obj.joints.hip_right = MuscleJoint(obj.config.hip, obj.config.cam, ...
-                obj.config.pneumatic);
+                obj.config.pneumatic, obj.gas_props);
             obj.joints.hip_left = MuscleJoint(obj.config.hip, obj.config.cam, ...
-                obj.config.pneumatic);
+                obj.config.pneumatic, obj.gas_props);
 
             % create initial state vector, update inital robot pose, and
             % initialize 'sim_data'
@@ -78,6 +76,31 @@ classdef JumpingRobot < matlab.mixin.Copyable
         end
         
         
+        function loadGasProps(obj)
+            % Load gas properties for specified gas
+            if isempty(obj.gas_props)
+                gas_data_path = fullfile(obj.repo_path,...
+                    'modeling', '@MuscleJoint', 'gas-data',...
+                    [obj.config.pneumatic.gas, '.txt']);
+                fileId = fopen(gas_data_path);
+                (textscan(fileId, '%s',14,'Delimiter','\t\')); % header
+                rawData = textscan(fileId, '%f %f %f %f %f %f %f %f %f %f %f %f %f %s');
+                numData = cell2mat(rawData(:,1:13));
+                obj.gas_props.pres = numData(:,2); % (MPa)
+                obj.gas_props.rho = numData(:,3); % (g/mL)
+                obj.gas_props.mu = numData(:,12); % (Pa*s)
+                fclose(fileId);
+
+                rs_path = fullfile(obj.repo_path,'modeling',...
+                    '@MuscleJoint', 'gas-data', 'Rs.mat');
+                data = load(rs_path, 'Rs');
+                obj.gas_props.Rs = data.Rs.(obj.config.pneumatic.gas); % (J/(kg-K)) 
+                obj.gas_props.T = 296.15; % (K) 23 C
+                obj.gas_props.k = 1/(obj.gas_props.Rs*obj.gas_props.T); % (Pa-m3/kg) 1/(Rs-T)
+            end
+        end
+        
+        
         function initializeState(obj)
             % Initialize state vector & robot pose; initialize 'sim_data'
             theta2 = obj.config.state0.q0(2);
@@ -86,11 +109,10 @@ classdef JumpingRobot < matlab.mixin.Copyable
             obj.state.x0 = [0, 0, theta1, deg2rad(obj.config.state0.q0(2:end)),... 
                             0, 0, deg2rad(obj.config.state0.qd0)];
                         
-            Rs = 287.058; % (J/(kg K))
-            T = 298; % (K)
             obj.state.p_source = (obj.config.pneumatic.p_source0+14.7)*6.89476; % (psi to kPa) source pressure
             obj.state.m_source = ((obj.state.p_source*1000)*...
-                (obj.config.pneumatic.v_source*0.001))/(Rs*T); % (kg) source mass
+                (obj.config.pneumatic.v_source*0.001))/...
+                (obj.gas_props.Rs*obj.gas_props.T); % (kg) source mass
                         
             %TODO: replace 'sim_data' with 'traj'?
             obj.sim_data.x = obj.state.x0; % this allows for plotting of initial pose
@@ -109,7 +131,7 @@ classdef JumpingRobot < matlab.mixin.Copyable
                     obj.config.(config_fn).(fns{j}) = config.(config_fn).(fns{j});
                 end
                 
-                % update joint object parameters
+                % update joint object related parameters
                 if strcmp(config_fn, 'cam')
                     joints_fns = fieldnames(obj.joints);
                     for j = 1:numel(joints_fns) % update cam parameters for all joints
@@ -128,7 +150,15 @@ classdef JumpingRobot < matlab.mixin.Copyable
                         obj.joints.(['hip_', sides{k}]).set_joint_param(obj.config.hip);
                     end
                 end
-                    
+                if strcmp(config_fn, 'pneumatic')
+                    loadGasProps(obj); % reload gas property data
+                    joints_fns = fieldnames(obj.joints);
+                    for j = 1:numel(joints_fns) % update pneumatic parameters for all joints
+                        obj.joints.(joints_fns{j}).set_pneumatic_param(obj.config.pneumatic);
+                        obj.joints.(joints_fns{j}).set_gas_props(obj.gas_props); % set gas properties
+                    end
+                end
+                
                 % update robot morphology parameters (create new spatial)
                 if strcmp(config_fn, 'morphology')
                     [model, morphology] = obj.buildSpatialRobot(obj.config.morphology);
