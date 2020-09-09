@@ -16,25 +16,23 @@ function getMuscPresFromCurvefit(obj, t_valve, robot)
     
     
     if t_valve < 0
-        obj.state.muscle_pressure = (14.7)*6.89476; % (psi to kPa);
+        obj.state.p_musc = 101.325; % (kPa);
 %     elseif t_valve > obj.musc_pres_curvefit.p.breaks(end) % if time is beyond transient
 %         pres = obj.musc_pres_curvefit.p.coefs(end,2); % set pressure to max
-    elseif t_valve > 0.1 %DEBUG: if valve open longer than specified time
-        
-        Rs = 287.058; % (J/(kg K))
-        T = 298; % (K)
-        obj.state.muscle_pressure = (obj.state.m_gas/(obj.state.muscle_volume))*Rs*T/1000; % (Pa to kPa)    
-        obj.state.rho_gas = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
-            obj.state.muscle_pressure*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
-        obj.state.mdot_gas = 0;
+    elseif t_valve > 0.1 %DEBUG: if valve open longer than specified time        
+        obj.state.p_musc = (obj.state.m_musc/(obj.state.vol_musc))*...
+            obj.gas_props.Rs*obj.gas_props.T/1000; % (Pa to kPa)    
+        obj.state.rho_musc = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
+            obj.state.p_musc*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
+        obj.state.mdot_musc = 0;
     else
-        obj.state.muscle_pressure = obj.musc_pres_curvefit(t_valve)...
-            + (14.7)*6.89476; % (psi to kPa); % set abs pressure based on curve fit
-        obj.state.rho_gas = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
-            obj.state.muscle_pressure*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
-        m_gas = obj.state.rho_gas*obj.state.muscle_volume; % (kg/m^3 * m^3 = kg)
-        obj.state.mdot_gas = (m_gas - obj.state.m_gas)/robot.sim_param.dt;
-        obj.state.m_gas = m_gas;
+        obj.state.p_musc = obj.musc_pres_curvefit(t_valve)...
+            + 101.325; % (kPa); % set abs pressure based on curve fit
+        obj.state.rho_musc = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
+            obj.state.p_musc*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
+        m_gas = obj.state.rho_musc*obj.state.vol_musc; % (kg/m^3 * m^3 = kg)
+        obj.state.mdot_musc = (m_gas - obj.state.m_musc)/robot.sim_param.dt;
+        obj.state.m_musc = m_gas;
     end
 
 
