@@ -45,15 +45,15 @@ global fullfile_export_opt_params
 
 %% Parameters
 % file names
-config_fname = fullfile(repo_path, 'modeling', 'robot_config_mod.yaml');
+config_fname = fullfile(repo_path, 'modeling', 'robot_config_icra2020.yaml');
 export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
 export_fname = 'TEST'; % name prefix for export files
 
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
-opt_param.k_tendon_hip = linspace(10, 3000, 10)/1000; % (kN cm) %DEBUG
-opt_param.k_tendon_knee = linspace(10, 3000, 10)/1000; % (kN cm) %DEBUG
+opt_param.k_tendon_hip = linspace(10, 3000, 10); % (N-cm) %DEBUG
+opt_param.k_tendon_knee = linspace(10, 3000, 10); % (N-cm) %DEBUG
 opt_param.l_shank = 0.25:0.1:0.55; % (m)
 opt_param.l_thigh = 0.25:0.1:0.55; % (m)
 opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
@@ -69,8 +69,8 @@ opt_type = 2;
 rng('shuffle');
 
 											
-opt_param.k_tendon_hip = 0.1; %0.8009; %37.53;
-opt_param.k_tendon_knee = 0.1;%0.10; %1.9989; %61.65;
+opt_param.k_tendon_hip = 100; %0.8009; %37.53;
+opt_param.k_tendon_knee = 100;%0.10; %1.9989; %61.65;
 opt_param.l_shank = 0.55; %0.55;
 opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
 opt_param.rad_hip = 4; %4.80;
@@ -121,8 +121,9 @@ sweep_arr_hip = combvec(opt_param.rad_hip, opt_param.slope_hip)';
 sweep_arr_joint = [sweep_arr_knee; sweep_arr_hip(~isnan(sweep_arr_hip(:,1))...
     & ~isnan(sweep_arr_hip(:,2)),:)]; % sweep vector of knee/hip cam radius & slope
 sweep_arr_joint = unique(sweep_arr_joint,'rows'); % get unique rows
-joint = MuscleJoint(robot.config.knee, robot.config.cam, robot.config.pneumatic); % create dummy joint
-joint.update_cam_data(sweep_arr_joint); % update cam data
+joint = MuscleJoint(robot.config.knee, robot.config.cam,...
+    robot.config.pneumatic, robot.gas_props); % create dummy joint
+joint.calculateCamData(sweep_arr_joint); % update cam data
 
 
 %% Optimization
