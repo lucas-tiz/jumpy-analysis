@@ -29,38 +29,39 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
     %%
     methods
         % Prototypes
+        calculateCamData(obj, sweep_arr);
+        
         getMuscPresFromCurvefit(obj, t, robot);
         integrateMuscPres(obj, t, robot);
         mdot_out = fminconTubeMassFlow(obj, p1, p2, l_tube, d_tube,...
             eps_tube, n_tube_seg, gas_props);
         mdot_tube= tubeMassFlowConstMu(obj, p1, p2)
+        
+        updateJointGeometry(obj, theta, theta0);
 
         
-        function obj = MuscleJoint(joint_param, cam_param, pneu_param)
+        function obj = MuscleJoint(joint_param, cam_param, pneu_param,...
+                gas_props)
             % Constructor
             obj.repo_path = obj.get_repo_path(); % get path to repository
             
-            % set up object joint-specific parameters & convert angles
-            obj.set_joint_param(joint_param);
-
-            % set up object cam parameters & convert angles
-            obj.set_cam_param(cam_param);
+            % set parameters passed in
+            obj.set_joint_param(joint_param); % set joint-specific parameters & convert angles
+            obj.set_cam_param(cam_param); % set object cam parameters & convert angles
+            obj.set_pneumatic_param(pneu_param); % set pneumatic paramters
+            obj.set_gas_props(gas_props); % set gas properties
             
             % create/load cam map if it exists
             obj.cam_map = containers.Map; % initialize to map
-            obj.load_cam_data(); % load cam data if exists
-            
-            % load pneumatic data
-            obj.pneu_param = pneu_param;
-            obj.loadPneumaticData()
-            
+            obj.load_cam_data(); % load cam data if exists           
+ 
             % initialize joint state
             obj.state = obj.createJointStateStruct(1);       
-            obj.state.muscle_pressure = (14.7)*6.89476; % (psi to kPa)
-            obj.state.muscle_volume = obj.calcMuscVolume(0);
-            obj.state.rho_gas = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
-                obj.state.muscle_pressure*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
-            obj.state.m_gas = obj.state.rho_gas*obj.state.muscle_volume; % (kg/m^3 * m^3 = kg)
+            obj.state.p_musc = (14.7)*6.89476; % (psi to kPa)
+            obj.state.vol_musc = obj.calcMuscVolume(0);
+            obj.state.rho_musc = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
+                obj.state.p_musc*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
+            obj.state.m_musc = obj.state.rho_musc*obj.state.vol_musc; % (kg/m^3 * m^3 = kg)
             
 %             % add robot parent class if provided
 %             if nargin > 2
@@ -102,123 +103,21 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
                 end
             end
         end
-          
-        function loadPneumaticData(obj)
-            % Load data: muscle volume, gas properties
-            
-            % load muscle volume curvefit
-            if isempty(obj.musc_vol_curvefit) 
-                musc_vol_curvefit_path = fullfile(obj.repo_path,...
-                    'modeling', '@MuscleJoint', 'muscle-data', 'volume',...
-                    'volume_curve_fit-poly3-water2.mat');
-                curvefit = load(musc_vol_curvefit_path, 'fit3_water2');
-                obj.musc_vol_curvefit = curvefit.('fit3_water2');
-            end
-
-            % load gas properties
-            if isempty(obj.gas_props)
-                gas_data_path = fullfile(obj.repo_path,...
-                    'modeling', '@MuscleJoint', 'gas-data',...
-                    [obj.pneu_param.gas, '.txt']);
-                fileId = fopen(gas_data_path);
-                (textscan(fileId, '%s',14,'Delimiter','\t\')); % header
-                rawData = textscan(fileId, '%f %f %f %f %f %f %f %f %f %f %f %f %f %s');
-                numData = cell2mat(rawData(:,1:13));
-                obj.gas_props.pres = numData(:,2); % (MPa)
-                obj.gas_props.rho = numData(:,3); % (g/mL)
-                obj.gas_props.mu = numData(:,12); % (Pa*s)
-                fclose(fileId);
-            end
-        end
-        
+                  
         
         %% cam/joint geometry stuff
         function joint_angle_sign = get_joint_angle_sign(obj)
-            % determine sign of joint angle relative to cam parameterization angle
+            % Determine sign of joint angle relative to cam parameterization angle
             joint_angle_sign = sign(obj.joint_param.theta_range(2)-...
                 obj.joint_param.theta_range(1));
         end
        
        
         function cam_angle = convert_joint_angle_to_cam_angle(obj, joint_angle)
-            % convert joint angle to corresponding cam angle
+            % Donvert joint angle to corresponding cam angle
             cam_angle = (joint_angle - obj.joint_param.theta_range(1))*obj.get_joint_angle_sign();
         end
-
-                
-        function update_cam_data(obj, sweep_arr)
-            % calculate effective moment arm for all cam geometries
-            % not previously saved; sweep_vec = [radius0, slope]
-            fprintf('calculating cam data...\n')
-            d = obj.cam_param.d;
-            phi_range = obj.cam_param.phi_range;
-            
-%             obj.load_cam_data(); % re-load cam data (for parallel i think) TODO: required if saving is an option?
-            s = size(sweep_arr); % get sweep array size
-            n_sweep = s(1); % get sweep array length (rows)
-            beta_vec = obj.cam_param.beta_vec;
-            n_beta = length(beta_vec);
-            tic
-            for idx_sweep = 1:n_sweep % loop over sweep vector
-                cam_rad0_tmp = sweep_arr(idx_sweep,1); % (cm) cam radius at zero degrees
-                cam_slope_tmp = sweep_arr(idx_sweep,2); % (cm/rad) cam profile radius slope
-                key = obj.cam_map_key(cam_rad0_tmp, cam_slope_tmp);
-                
-                if ~obj.cam_map.isKey(key) % if key doesn't already exist, calculate data
-                    ema_vec = zeros(1,n_beta);
-                    linear_displace_vec = zeros(1,n_beta);
-
-                    calc_ema = @(beta,r0,m,d,phi_range)obj.calc_ema(beta,r0,m,d,phi_range); % create anonymous fcn for parfor
-                    parfor idx_beta = 1:n_beta % loop over joint angles TODO: change back to parfor
-                        beta = beta_vec(idx_beta);
-                        geom = calc_ema(beta,cam_rad0_tmp,cam_slope_tmp,d,phi_range); % calculate cam geometry
-                        ema_vec(idx_beta) = geom.ema; % add effective moment arm
-                        linear_displace_vec(idx_beta) = geom.l_disp; % add linear joint displacement                         
-                    end
-            
-                    obj.cam_map(key) = {ema_vec, linear_displace_vec}; % update temp cam map
-                    
-                    fprintf('    updated %i of %i cam profiles, %4.1f elapsed\n',...
-                        idx_sweep, n_sweep, toc)
-                end
-            end
-            fprintf('all cam profiles updated, %0.2f s elapsed\n\n', toc)
-
-            %TODO: make saving an option?
-            cam_map_saved = obj.cam_map; % create cam map save var
-            cam_param_saved = obj.cam_param; % create param save var
-            save(obj.cam_param.filename, 'cam_map_saved', 'cam_param_saved') % save cam map & params
-        end
-        
-        
-        function updateGeom(obj, theta, theta0)
-            % Update moment arm & joint displacement at current joint angle
-            % (interp/extrap from saved data)
-            
-            key = obj.cam_map_key();
-            if ~obj.cam_map.isKey(key) % if key doesn't already exist, calculate data
-                fprintf('NOT KEY: %s\n', key)
-                obj.update_cam_data([obj.joint_param.rad0, obj.joint_param.slope]);
-            end
-
-            cam_data = obj.cam_map(key); % get cam data
-            moment_arm_vec = cam_data{1}; % get effective moment arm data
-            linear_displace_vec = cam_data{2};% get linear joint displacement data
-            beta_vec = obj.cam_param.beta_vec; % get beta angle data
-            
-            beta0 = obj.convert_joint_angle_to_cam_angle(theta0); % convert joint angle to cam angle
-            beta = obj.convert_joint_angle_to_cam_angle(theta); % convert joint angle to cam angle
-            obj.state.moment_arm = interp1(beta_vec, moment_arm_vec, beta,... % calculate ema at current angle
-                'linear', 'extrap');             
-                                                    
-            l_disp0 = interp1(beta_vec, linear_displace_vec, beta0,... % calculate displacement from initial angle to sim starting angle
-                'linear', 'extrap'); 
-            l_disp = interp1(beta_vec, linear_displace_vec,... % calculate displacement from initial angle to current angle
-                beta, 'linear', 'extrap');
-            obj.state.linear_displace = l_disp - l_disp0; % switch sign so that positive joint disp corresponds to negative MTU disp 
-        end
-        
-        
+  
         function key = cam_map_key(obj, varargin)
             % Format 'cam_map' key
             if nargin > 1
@@ -236,11 +135,20 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
         
         %% MTU stuff
         function vol_musc = calcMuscVolume(obj, cont_musc)
+            % load muscle volume curvefit
+            if isempty(obj.musc_vol_curvefit) 
+                musc_vol_curvefit_path = fullfile(obj.repo_path,...
+                    'modeling', '@MuscleJoint', 'muscle-data', 'volume',...
+                    'volume_curve_fit-poly3-water2.mat');
+                curvefit = load(musc_vol_curvefit_path, 'fit3_water2');
+                obj.musc_vol_curvefit = curvefit.('fit3_water2');
+            end
+            
             % Calculate muscle volume
             l_tube = obj.pneu_param.l_tube_valve_musc*0.0254; % (in to m) tube length
             d_tube = obj.pneu_param.d_tube_valve_musc*0.0254; % (in to m) tube inner diameter
             vol_musc = obj.musc_vol_curvefit(cont_musc)*1e-6; % (mL to m^3) muscle vol from curvefit
-            vol_musc = vol_musc + l_tube*pi*(d_tube/2)^2; % (m^3) add tubing volume to muscle
+            vol_musc = vol_musc + l_tube*pi*(d_tube/2)^2; % (m^3) add tubing volume to muscle TODO: is this right?           
         end
         
         
@@ -261,7 +169,7 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
                        obj.musc_force_surffit.p00, obj.musc_force_surffit.p01, obj.musc_force_surffit.p02, obj.musc_force_surffit.p03];
             end
 
-            pres = obj.state.muscle_pressure - 14.7*6.89476; % (kPa) gauge pressure
+            pres = obj.state.p_musc - 14.7*6.89476; % (kPa) gauge pressure
             disp = obj.state.linear_displace;
             
             % calculate muscle contraction from muscle-tendon force balance
@@ -305,18 +213,18 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
             vol_musc = obj.calcMuscVolume(cont_musc);
             
             % update state 
-            obj.state.muscle_contract_prev = obj.state.muscle_contract;
-            obj.state.muscle_contract = cont_musc;
-            obj.state.muscle_volume = vol_musc;
-            obj.state.tendon_stretch = stretch_tendon;
-            obj.state.mtu_force = force; 
+            obj.state.contract_musc_prev = obj.state.contract_musc;
+            obj.state.contract_musc = cont_musc;
+            obj.state.vol_musc = vol_musc;
+            obj.state.elong_tendon = stretch_tendon;
+            obj.state.force_mtu = force; 
         end
         
         
         %% Joint torque
         function updateJointTorque(obj)
             % Update joint torque generated by MTU
-            obj.state.torque = obj.state.mtu_force ...
+            obj.state.torque = obj.state.force_mtu ...
                 *obj.state.moment_arm/100; % (Nm) calculate joint torque 
         end
 
@@ -329,18 +237,21 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
                 
             obj.integrateMuscPres(t_valve, robot); % integrate pressure in time
 %             obj.getMuscPresFromCurvefit(t_valve, robot); % get pressure from response curve
-            % obj.state.muscle_pressure
+            % obj.state.p_musc
+            
+            
+            %TODO: calcMuscleGasState
 
-            obj.updateGeom(theta, theta0); % calculate moment arm & displacement
+            obj.updateJointGeometry(theta, theta0); % calculate moment arm & displacement
             % obj.state.moment_arm
             % obj.state.linear_displace
 
             obj.updateMtu(); % calculate contraction force & muscle/tendon lengths
-            % obj.state.muscle_contract_prev
-            % obj.state.muscle_contract
-            % obj.state.muscle_volume 
-            % obj.state.tendon_stretch
-            % obj.state.mtu_force
+            % obj.state.contract_musc_prev
+            % obj.state.contract_musc
+            % obj.state.vol_musc 
+            % obj.state.elong_tendon
+            % obj.state.force_mtu
 
             updateJointTorque(obj); % (Nm) calculate joint torque 
             % obj.state.torque
@@ -382,7 +293,15 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
             
             obj.cam_param.filename = obj.create_cam_filename(); % construct cam file name from parameters
         end
+        
+        function set_pneumatic_param(obj, pneu_param)
+            obj.pneu_param = pneu_param; % set pneumatic parameters
+        end                    
 
+        function set_gas_props(obj, gas_props)
+            obj.gas_props = gas_props; % set gas properties
+        end
+            
         
     end % end methods
       
@@ -484,17 +403,22 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
 
         
         function state = createJointStateStruct(n_elem)
-            state.rho_gas = zeros(n_elem,1);
-            state.m_gas = zeros(n_elem,1);
-            state.mdot_gas = zeros(n_elem,1);
-            state.muscle_pressure = zeros(n_elem,1);
+            state.valve = zeros(n_elem,1);
+            state.p_musc = zeros(n_elem,1);
+            state.pdot_musc = zeros(n_elem,1);
+            state.m_musc = zeros(n_elem,1);
+            state.mdot_musc = zeros(n_elem,1);
+            state.rho_musc = zeros(n_elem,1);
+
             state.linear_displace = zeros(n_elem,1);
             state.ema = zeros(n_elem,1);
-            state.muscle_contract_prev = zeros(n_elem,1);
-            state.muscle_contract = zeros(n_elem,1);
-            state.muscle_volume = zeros(n_elem,1);
-            state.tendon_stretch = zeros(n_elem,1);
-            state.mtu_force = zeros(n_elem,1);
+
+            state.contract_musc_prev = zeros(n_elem,1);
+            state.contract_musc = zeros(n_elem,1);
+            state.vol_musc = zeros(n_elem,1);
+            state.elong_tendon = zeros(n_elem,1);
+            state.force_mtu = zeros(n_elem,1);
+            
             state.torque = zeros(n_elem,1);
         end
         
