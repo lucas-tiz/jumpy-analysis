@@ -69,6 +69,18 @@ opt_type = 2;
 rng('shuffle');
 
 											
+% opt_param.k_tendon_hip = 10; %100; %0.8009; %37.53;
+% opt_param.k_tendon_knee = 610.8850; %100;%0.10; %1.9989; %61.65;
+% opt_param.l_shank = 0.4263; %0.55; %0.55;
+% opt_param.l_thigh = 0.5232; %0.55; %0.25:0.1:0.55;
+% opt_param.rad_hip = 5.5351; %4; %4.80;
+% opt_param.rad_knee = 6; %4; %3.40;
+% opt_param.slope_hip = 3.9724; %0; %-0.60;
+% opt_param.slope_knee = 2.7359; %0; %-0.90;
+% opt_param.t_hip = 0.5; %0.0;%0.26; %0.29;
+% opt_param.t_knee = 0.0;%0.35; %0.27;
+% opt_param.theta0_hip = 90; %-60;
+% opt_param.theta0_knee = 163.0801; %158;
 opt_param.k_tendon_hip = 100; %0.8009; %37.53;
 opt_param.k_tendon_knee = 100;%0.10; %1.9989; %61.65;
 opt_param.l_shank = 0.55; %0.55;
@@ -112,7 +124,7 @@ export_param.fullfile_opt_param = fullfile_export_opt_params; %TODO
 
 %% Instantiate robot
 robot = JumpingRobot(config_fname, sim_param); % instantiate
-v.export = 0; robot.animTrajectory(0.01,anim_delay,16,v,[0,0]); % display model in initial state
+v.export = 0; robot.animTrajectory(0.01,anim_delay,30,v,[0,0]); % display model in initial state
 
 
 %% Calculate cam data before simulations
@@ -138,9 +150,9 @@ optimizer = OptDesign(robot, opt_param, export_param);
 % options.Display = 'iter';
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('sa', options);
 
-% options.SwarmSize = 5;%2000;
+% options.SwarmSize = 10;%2000;
 % options.MaxIter = 3;%100;
-% options.UseParallel = true;
+% options.UseParallel = false;
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
 
 
