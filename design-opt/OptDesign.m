@@ -265,7 +265,11 @@ classdef OptDesign %< matlab.mixin.Copyable
             end
 
             % convert 'opt_param' struct to 'config' struct
-            config.control.t_musc_activate = [op.t_knee, op.t_hip, op.t_hip, op.t_knee];    
+            % shift activation times so that first activation is at t=0
+            t_musc_activate = [op.t_knee, op.t_hip, op.t_hip, op.t_knee]; 
+            config.control.t_musc_activate = t_musc_activate - min(t_musc_activate);
+%             config.control.t_musc_activate = [op.t_knee, op.t_hip, op.t_hip, op.t_knee];    
+            
             config.knee.k_tendon = op.k_tendon_knee;
             config.hip.k_tendon = op.k_tendon_hip; 
             config.knee.rad0 = op.rad_knee;
