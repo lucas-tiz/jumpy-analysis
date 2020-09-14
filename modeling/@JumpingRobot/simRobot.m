@@ -9,7 +9,7 @@ function simRobot(obj)
     obj.sim_data.grf.r = zeros(n_time,2);
     obj.sim_data.grf.l = zeros(n_time,2);
     obj.sim_data.m_source = zeros(n_time,1);
-    obj.sim_data.p_source = zeros(n_time,1);
+    obj.sim_data.p_source = ones(n_time,1)*101.325;
     
     joints = obj.config.model.joint_order;
     for idx_j = 1:length(joints)
@@ -43,6 +43,10 @@ function simRobot(obj)
     
     % simulate over time vector
     for idx_t = 2:length(obj.sim_data.t)
+%         fprintf('t: %f\n', obj.sim_data.t(idx_t))
+%         if obj.sim_data.t(idx_t) >= 0.4995
+%             fprintf('pause')
+%         end
 
         % get state
         t = obj.sim_data.t(idx_t); % current time
