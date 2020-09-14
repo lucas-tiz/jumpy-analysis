@@ -38,6 +38,7 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
         mdot_tube= tubeMassFlowConstMu(obj, p1, p2)
         
         updateJointGeometry(obj, theta, theta0);
+        updateMtu(obj);
 
         
         function obj = MuscleJoint(joint_param, cam_param, pneu_param,...
@@ -149,75 +150,6 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
             d_tube = obj.pneu_param.d_tube_valve_musc*0.0254; % (in to m) tube inner diameter
             vol_musc = obj.musc_vol_curvefit(cont_musc)*1e-6; % (mL to m^3) muscle vol from curvefit
             vol_musc = vol_musc + l_tube*pi*(d_tube/2)^2; % (m^3) add tubing volume to muscle TODO: is this right?           
-        end
-        
-        
-        function updateMtu(obj)
-            % calculate muscle contraction length, muscle volume, 
-            % corresponding tendon displacement, and muscle force            
-            persistent psf
-            if isempty(obj.musc_force_surffit) % load force-length-pressure surface fit
-                surf_fit_path = fullfile(obj.repo_path,...
-                    'modeling', '@MuscleJoint', 'muscle-data', 'force-calibration',...
-                    'surface_fit-clean_cut_1p25D_crimp_over_tube_sleeve_345kpa.mat');
-                
-                sf = load(surf_fit_path, 'sf'); 
-                obj.musc_force_surffit = sf.('sf');
-                psf = [obj.musc_force_surffit.p30,...
-                       obj.musc_force_surffit.p20, obj.musc_force_surffit.p21,...
-                       obj.musc_force_surffit.p10, obj.musc_force_surffit.p11, obj.musc_force_surffit.p12,...
-                       obj.musc_force_surffit.p00, obj.musc_force_surffit.p01, obj.musc_force_surffit.p02, obj.musc_force_surffit.p03];
-            end
-
-            pres = obj.state.p_musc - 14.7*6.89476; % (kPa) gauge pressure
-            disp = obj.state.linear_displace;
-            
-            % calculate muscle contraction from muscle-tendon force balance
-            %   (p00 + p01*pres + p02*pres^2 + + p03*pres^3) 
-            % + (p10 + p11*pres + p12*pres^2)*cont 
-            % + (p20 + p21*pres)*cont^2 
-            % + p30*cont^3 
-            % = k*disp + k*cont
-            p = [psf(1),... % cont^3
-                 (psf(2) + psf(3)*pres),... % cont^2
-                 (psf(4) + psf(5)*pres + psf(6)*pres^2 - obj.joint_param.k_tendon),... % cont
-                 (psf(7) + psf(8)*pres + psf(9)*pres^2 + psf(10)*pres^3 - obj.joint_param.k_tendon*disp)]; % constant 
-            r = roots(p);
-            cont_musc = r(3); % (cm)
-       
-%             if pres == 0 % if no pressure, no contraction
-%                 cont_musc = 0;
-%             end
-            
-            % calculate corresponding MTU force and tendon stretch
-            if cont_musc <= 0 % if zero / negative contraction
-                %TODO: rethink infinitely stiff/no tendon 
-                if obj.joint_param.k_tendon >= 1e5 % if tendon is approximately infinitely stiff                    
-                    force = max(0,obj.musc_force_surffit(0,pres)) + 1e4*(-cont_musc); % make muscle very stiff in tension (1e2 N/cm)
-                    stretch_tendon = 0;
-                else
-                    cont_musc = 0; % set contraction to zero (assume no stretch)
-                    stretch_tendon = max(0,disp); % disregard negative displacement
-                    force = obj.joint_param.k_tendon*stretch_tendon;
-                end
-            elseif cont_musc >= (6.5 + pres/300) % if beyond range of surf fit in contraction direction
-                cont_musc = 6.5 + pres/300;
-                force = 0;
-                stretch_tendon = 0;
-            else % if positive contraction in surface fit range
-                force = max(0,obj.musc_force_surffit(cont_musc,pres)); % disregard negative forces from fit
-                stretch_tendon = force/obj.joint_param.k_tendon;
-            end
-            
-            % calculate muscle volume
-            vol_musc = obj.calcMuscVolume(cont_musc);
-            
-            % update state 
-            obj.state.contract_musc_prev = obj.state.contract_musc;
-            obj.state.contract_musc = cont_musc;
-            obj.state.vol_musc = vol_musc;
-            obj.state.elong_tendon = stretch_tendon;
-            obj.state.force_mtu = force; 
         end
         
         
@@ -404,7 +336,7 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
         
         function state = createJointStateStruct(n_elem)
             state.valve = zeros(n_elem,1);
-            state.p_musc = zeros(n_elem,1);
+            state.p_musc = ones(n_elem,1)*101.325;
             state.pdot_musc = zeros(n_elem,1);
             state.m_musc = zeros(n_elem,1);
             state.mdot_musc = zeros(n_elem,1);
