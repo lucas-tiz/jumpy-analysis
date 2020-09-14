@@ -20,8 +20,8 @@ f.path = fullfile(repo_path, 'modeling', '@MuscleJoint', 'muscle-data',...
 testArr =   [5 ,10,15,20,25,30,35,40,45,50;  % test pressures (psi)
              1 ,1 ,1 ,1 ,1 ,1 ,1 ,1 ,1 ,1 ]; % corresponding test numbers
          
-testArr =   [50;  % test pressures (psi)
-             1]; % corresponding test numbers
+% testArr =   [50;  % test pressures (psi)
+%              1]; % corresponding test numbers
 
 % mcu data parameters
 timeStart = 20; % (s) mcu start time
@@ -106,7 +106,7 @@ dataCellArr0{1}{2}.force = dataCellArr0{1}{2}.force*0;
 
 
 %%
-forceOptens3D.plotView = 2; % 1=3D, 2=len, 3=pres
+forceOptens3D.plotView = 1; % 1=3D, 2=len, 3=pres
 
 if forceOptSens3D.plot == 1
     
@@ -444,7 +444,7 @@ scatter3(dataArr(:,1),dataArr(:,2),dataArr(:,3))
 
 
 %% Interp stuff 2
-k_elong = 500; % (N/cm)
+k_elong = 200; % (N/cm)
 
 cont_lims = [-1,8]; % (cm)
 cont_vec = (-1:0.5:8)'; % (cm)
@@ -506,11 +506,11 @@ end
 
 
 
-save('force_makima_interp_data.mat', 'X','Y','Z')
+% save('force_makima_interp_data.mat', 'X','Y','Z')
 
 
 % interp2 surface
-[Xint,Yint] = meshgrid(-1:0.1:12, 0:10:500);
+[Xint,Yint] = meshgrid(-2:0.1:12, 0:10:500);
 
 Zint = interp2(X, Y, Z, Xint, Yint, 'makima');
 
@@ -537,7 +537,7 @@ scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3), 200, '.',...
 
 colormap copper
 caxis([0 150])
-surf(Xint,Yint,Zint, 'EdgeColor','none','FaceAlpha',0.5);
+surf(Xint,Yint,Zint, 'EdgeColor','k','FaceAlpha',0.5);
 
 
 
@@ -550,7 +550,7 @@ if forceOptSens3D.save == 1
     f8.Units = 'inches';
     f8.Position = figPos;
 %     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
-    export_fig 'force_interp_global.png' -transparent -r600
+%     export_fig 'force_interp_global.png' -transparent -r600
 
 end
 
