@@ -41,9 +41,9 @@ t1/t2
 %% Test MTU force balance
 clc
 
-k_tendon = 50;
+k_tendon = 500;
 pres = 100; % (kPa)
-disp = 0; % (cm)
+disp = 0.5; % (cm)
 
 psf = [force_sf.p30,...
    force_sf.p20, force_sf.p21,...
@@ -51,8 +51,8 @@ psf = [force_sf.p30,...
    force_sf.p00, force_sf.p01, force_sf.p02, force_sf.p03];
 
 
-cont_vec = 1;
-pres_vec = -50:1:700;
+cont_vec = 0;
+pres_vec = 0; %-0:1:500;
 
 % root finding alg
 tic
@@ -79,33 +79,68 @@ for i = 1:length(cont_vec)
     for j = 1:length(pres_vec)
 %         cont = cont_vec(i);
         pres = pres_vec(j);
-        tol = 0.1; %TODO
-        cont = binaryContSearch(cont_range, k_tendon, pres, tol);
+        tol = 1; %TODO
+        cont = binaryContSearch(cont_range, k_tendon, pres, disp, tol);
     end
 end
-        toc
+toc
+
+
+% simple search
+tic
+cont_guess = -1:0.01:8;
+err_vec = zeros(size(pres_vec));
+n = 1;
+for i = 1:length(cont_vec)
+    for j = 1:length(pres_vec)
+        pres = pres_vec(j);
+        
+        force_muscle = interpForce(cont_guess,pres);
+        force_spring = cont_guess*k_tendon + disp*k_tendon;
+    
+        [err,idx] = min((force_muscle - force_spring).^2);
+        err_vec(n) = err;
+        cont_musc_simple = cont_guess(idx);
+        
+        n = n + 1;
+    end
+end
+toc
+[val, idx] = max(err_vec);
+sqrt(val)
+sqrt(mean(err_vec))
+
+
+figure(31); clf; hold on; grid on;
+plot(cont_guess, interpForce(cont_guess,pres_vec(idx)))
+plot(cont_guess, cont_guess*k_tendon + disp*k_tendon)
+ylim([-10 700])
+
+
+
+%%
+
 
 
 %% Functions
 
 
-
-function cont_guess = binaryContSearch(cont_range, k_tendon, pres, tol)
+function cont_guess = binaryContSearch(cont_range, k_tendon, pres, disp, tol)
     cont_guess = (cont_range(2) + cont_range(1))/2;
 
     force_muscle = interpForce(cont_guess,pres);
 %     global force_sf
 %     force_muscle = force_sf(cont_guess, pres);
-    force_spring = cont_guess*k_tendon;
+    force_spring = cont_guess*k_tendon + disp*k_tendon;
 
     if force_muscle >= (force_spring + tol/2)
         % search right side
         cont_range = [cont_guess cont_range(2)];
-        cont_guess = binaryContSearch(cont_range, k_tendon, pres, tol);
+        cont_guess = binaryContSearch(cont_range, k_tendon, pres, disp, tol);
     elseif (force_spring - tol/2) > force_muscle
         % search left side
         cont_range = [cont_range(1) cont_guess];
-        cont_guess = binaryContSearch(cont_range, k_tendon, pres, tol);
+        cont_guess = binaryContSearch(cont_range, k_tendon, pres, disp, tol);
     else
         return
     end
