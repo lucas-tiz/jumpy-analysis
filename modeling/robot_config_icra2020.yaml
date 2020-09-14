@@ -41,7 +41,7 @@ control: # control parameters [knee_r, hip_r, hip_l, knee_l]
 pneumatic: # pneumatic system parameters
   gas: air # gas type
   l_tube_valve_musc: 74 # (in)  ~2.0" valve fittings + 68.75" valve to muscle + ~3.2" muscle inlet tube
-  d_tube_valve_musc: 0.1875 # (in) 3/16" ID
-  eps_tube: 1.5e-6 # (m) TODO: how to determine? can vary from 1.5e-6 to 1e-5
+  d_tube_valve_musc: 0.1575 #0.1875 # (in) 3/16" ID
+  eps_tube: 1e-5 # (m) TODO: how to determine? can vary from 1.5e-6 to 1e-5
   v_source: 1.475 # (L) Ninja SL 90 carbon fiber paintball tank (90 cubic in)
   p_source0: 60 # (gauge psi) source pressure TODO: adjust based on test setup
