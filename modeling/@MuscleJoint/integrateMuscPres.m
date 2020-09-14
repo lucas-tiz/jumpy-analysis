@@ -11,6 +11,11 @@ function integrateMuscPres(obj, t, robot)
         obj.state.mdot_musc = mdot;
         obj.state.p_musc = obj.state.p_musc + pdot*robot.sim_param.dt; % integrate muscle pressure
         obj.state.m_musc = obj.state.m_musc + mdot*robot.sim_param.dt; % integrate muscle mass
+        
+%         if ~isreal(obj.state.p_musc)
+%             fprintf('imag\n')
+%         end
+%         
         obj.state.rho_musc = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
             obj.state.p_musc*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3) air density
         
@@ -58,5 +63,8 @@ end
         % evaluate pressure dynamics
         gamma = 1.0; %TODO: try 1.4
         pdot = gamma*joint.state.p_musc*((mdot/joint.state.m_musc) - (Vdot_musc/joint.state.vol_musc));
-        
+%         fprintf('re: %f, im: %f\n\n', real(pdot), imag(pdot))
     end
+
+    
+    
