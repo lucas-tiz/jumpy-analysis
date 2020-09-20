@@ -60,8 +60,8 @@ opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
 opt_param.rad_knee = -3:0.1:6; %0:1:6; % (cm)
 opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
 opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
-opt_param.t_hip = 0.0:0.1:0.5; % (s)
-opt_param.t_knee = 0.0:0.1:0.5; % (s)
+opt_param.t_hip = -0.3:0.1:0.3; % (s)
+% opt_param.t_knee = 0.0:0.1:0.5; % (s)
 opt_param.theta0_hip = -90:10:90; % (deg)
 opt_param.theta0_knee = 0:10:180; % (deg)
 opt_type = 2;
@@ -69,30 +69,30 @@ opt_type = 2;
 rng('shuffle');
 
 											
-% opt_param.k_tendon_hip = 10; %100; %0.8009; %37.53;
-% opt_param.k_tendon_knee = 610.8850; %100;%0.10; %1.9989; %61.65;
-% opt_param.l_shank = 0.4263; %0.55; %0.55;
-% opt_param.l_thigh = 0.5232; %0.55; %0.25:0.1:0.55;
-% opt_param.rad_hip = 5.5351; %4; %4.80;
-% opt_param.rad_knee = 6; %4; %3.40;
-% opt_param.slope_hip = 3.9724; %0; %-0.60;
-% opt_param.slope_knee = 2.7359; %0; %-0.90;
-% opt_param.t_hip = 0.5; %0.0;%0.26; %0.29;
-% opt_param.t_knee = 0.0;%0.35; %0.27;
-% opt_param.theta0_hip = 90; %-60;
-% opt_param.theta0_knee = 163.0801; %158;
-opt_param.k_tendon_hip = 100; %0.8009; %37.53;
-opt_param.k_tendon_knee = 100;%0.10; %1.9989; %61.65;
-opt_param.l_shank = 0.55; %0.55;
-opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
-opt_param.rad_hip = 4; %4.80;
-opt_param.rad_knee = 4; %3.40;
-opt_param.slope_hip = 0; %-0.60;
-opt_param.slope_knee = 0; %-0.90;
-opt_param.t_hip = 0.0;%0.26; %0.29;
+opt_param.k_tendon_hip = 10; %100; %0.8009; %37.53;
+opt_param.k_tendon_knee = 2720.45; %100;%0.10; %1.9989; %61.65;
+opt_param.l_shank = 0.55; %0.55; %0.55;
+opt_param.l_thigh = 0.35; %0.55; %0.25:0.1:0.55;
+opt_param.rad_hip = -1.92; %4; %4.80;
+opt_param.rad_knee = 6; %4; %3.40;
+opt_param.slope_hip = 3.00; %0; %-0.60;
+opt_param.slope_knee = 1.48; %0; %-0.90;
+opt_param.t_hip = 0.20; %0.0;%0.26; %0.29;
 opt_param.t_knee = 0.0;%0.35; %0.27;
-opt_param.theta0_hip = -60;
-opt_param.theta0_knee = 158;
+opt_param.theta0_hip = 38.01; %-60;
+opt_param.theta0_knee = 115.88; %158;
+% opt_param.k_tendon_hip = 100; %0.8009; %37.53;
+% opt_param.k_tendon_knee = 100;%0.10; %1.9989; %61.65;
+% opt_param.l_shank = 0.55; %0.55;
+% opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
+% opt_param.rad_hip = 4; %4.80;
+% opt_param.rad_knee = 4; %3.40;
+% opt_param.slope_hip = 0; %-0.60;
+% opt_param.slope_knee = 0; %-0.90;
+% opt_param.t_hip = 0.0;%0.26; %0.29;
+% opt_param.t_knee = 0.0;%0.35; %0.27;
+% opt_param.theta0_hip = -60;
+% opt_param.theta0_knee = 158;
 opt_type = 1;
 
 % simulation parameters for design optimization
@@ -150,7 +150,7 @@ optimizer = OptDesign(robot, opt_param, export_param);
 % options.Display = 'iter';
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('sa', options);
 
-% options.SwarmSize = 10;%2000;
+% options.SwarmSize = 5;%2000;
 % options.MaxIter = 3;%100;
 % options.UseParallel = false;
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
@@ -245,55 +245,6 @@ if opt_type == 1
     end
 end
 
-
-% % genetic algorithm
-% if opt_type == 3    
-%     fn = sort(fieldnames(opt_param));
-%     n_fn = numel(fn);
-%     lb = zeros(n_fn,1);
-%     ub = zeros(n_fn,1);
-%     idx_discrete = [];
-%     for idx_fn = 1:n_fn
-%         if any(strcmp(fn{idx_fn}, opt_param_discrete)) % if discretized param
-%             lb(idx_fn) = 1;
-%             ub(idx_fn) = length(opt_param.(fn{idx_fn}));
-%             idx_discrete = [idx_discrete, idx_fn];
-%         else % if continuous param
-%             lb(idx_fn) = min(opt_param.(fn{idx_fn}));
-%             ub(idx_fn) = max(opt_param.(fn{idx_fn}));
-%         end
-%     end
-%     
-%     %TODO:
-%     %{
-%     - change elite count
-%     - change crossover fraction
-%     - crossover function: heuristic? arithemtic? etc.
-%     %}
-%     
-%     opts = optimoptions(@ga, ...
-%         'PopulationSize', 5, ... %20000
-%         'MaxGenerations', 3, ... %10
-%         'EliteCount', 2, ... %0.05*20000
-%         'FunctionTolerance', 1e-8, ...
-%         'PlotFcn', @gaplotbestf, ...
-%         'OutputFcn', @(options,state,flag)gaOutputFcn(options,state,flag,...
-%             opt_param, opt_param_discrete),...
-%         'UseParallel', true);
-%     
-%     objFun = @(param_vec)gaObjFcn(param_vec, robot, sim_param, opt_param,...
-%         opt_param_discrete);
-%                                         
-%     [xbest, fbest, exitflag] = ga(objFun, n_fn, [], [], [], [], ...
-%         lb, ub, [], idx_discrete, opts);
-%     
-%     param_vec_optimal = camMapVars(xbest, opt_param, opt_param_discrete);
-%     
-%     if export_opt_params == 1
-%         exportOptParams(nan, nan,...
-%             -fbest, param_vec_optimal)
-%     end
-% end
 
 
 %% Simulate optimal config
