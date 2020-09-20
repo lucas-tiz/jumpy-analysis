@@ -83,8 +83,8 @@ function plotTrajectory(obj)
     subplot(4,2,3)
     hold on
     grid on
-    plot(obj.sim_data.t, obj.sim_data.joints.knee_right.p_musc-(14.7)*6.89476, 'Color', co(1,:))
-    plot(obj.sim_data.t, obj.sim_data.joints.knee_left.p_musc-(14.7)*6.89476, ':', 'Color', co(1,:), 'LineWidth', 1.5)
+    plot(obj.sim_data.t, obj.sim_data.joints.knee_right.p_musc-101.325, 'Color', co(1,:))
+    plot(obj.sim_data.t, obj.sim_data.joints.knee_left.p_musc-101.325, ':', 'Color', co(1,:), 'LineWidth', 1.5)
     xlabel('Time (s)')
     ylabel('Gauge Pressure (kPa)')
     legend('Pressure 1', 'Pressure 4')
@@ -136,8 +136,8 @@ function plotTrajectory(obj)
     subplot(4,2,4)
     hold on
     grid on
-    plot(obj.sim_data.t, obj.sim_data.joints.hip_right.p_musc-(14.7)*6.89476, 'Color', co(1,:))
-    plot(obj.sim_data.t, obj.sim_data.joints.hip_left.p_musc-(14.7)*6.89476, ':', 'Color', co(1,:), 'LineWidth', 1.5)
+    plot(obj.sim_data.t, obj.sim_data.joints.hip_right.p_musc-101.325, 'Color', co(1,:))
+    plot(obj.sim_data.t, obj.sim_data.joints.hip_left.p_musc-101.325, ':', 'Color', co(1,:), 'LineWidth', 1.5)
     xlabel('Time (s)')
     ylabel('Gauge Pressure (kPa)')
     legend('Pressure 1', 'Pressure 4')
@@ -204,7 +204,7 @@ function plotTrajectory(obj)
     title('Source Tank Pressure')
     hold on
     grid on
-    plot(obj.sim_data.t, obj.sim_data.p_source*0.145038 - 14.7)
+    plot(obj.sim_data.t, (obj.sim_data.p_source-101.325)*0.145038)
     xlabel('Time (s)')
     ylabel('Gauge Pressure (psi)')
     
