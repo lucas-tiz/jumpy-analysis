@@ -38,7 +38,7 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
         mdot_tube= tubeMassFlowConstMu(obj, p1, p2)
         
         updateJointGeometry(obj, theta, theta0);
-        updateMtu(obj);
+        updateMtu(obj, p_musc);
 
         
         function obj = MuscleJoint(joint_param, cam_param, pneu_param,...
@@ -58,12 +58,13 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
  
             % initialize joint state
             obj.state = obj.createJointStateStruct(1);       
-            obj.state.p_musc = (14.7)*6.89476; % (psi to kPa)
+            obj.state.p_musc = 101.325; % (kPa)
             obj.state.vol_musc = obj.calcMuscVolume(0);
             obj.state.rho_musc = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
                 obj.state.p_musc*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3)
-            obj.state.m_musc = obj.state.rho_musc*obj.state.vol_musc; % (kg/m^3 * m^3 = kg)
-            
+            obj.state.m_musc = (obj.state.p_musc*obj.state.vol_musc)/...
+                (obj.gas_props.Rs*obj.gas_props.T/1000); % (Pa to kPa)  
+                        
 %             % add robot parent class if provided
 %             if nargin > 2
 %                 obj.robot = varargin{1};
@@ -167,26 +168,15 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
             % (initial joint angle, current joint angle,
             % time relative to valve open)
                 
-            obj.integrateMuscPres(t_valve, robot); % integrate pressure in time
-%             obj.getMuscPresFromCurvefit(t_valve, robot); % get pressure from response curve
-            % obj.state.p_musc
-            
-            
-            %TODO: calcMuscleGasState
-
             obj.updateJointGeometry(theta, theta0); % calculate moment arm & displacement
-            % obj.state.moment_arm
-            % obj.state.linear_displace
-
-            obj.updateMtu(); % calculate contraction force & muscle/tendon lengths
-            % obj.state.contract_musc_prev
-            % obj.state.contract_musc
-            % obj.state.vol_musc 
-            % obj.state.elong_tendon
-            % obj.state.force_mtu
-
+            obj.integrateMuscPres(t_valve, robot); % integrate pressure in time
+                % includes obj.updateMtu()
             updateJointTorque(obj); % (Nm) calculate joint torque 
-            % obj.state.torque
+
+%             obj.updateJointGeometry(theta, theta0); % calculate moment arm & displacement
+%             obj.getMuscPresFromCurvefit(t_valve, robot); % get pressure from response curve
+%             obj.updateMtu(); % calculate contraction force & muscle/tendon lengths
+%             updateJointTorque(obj); % (Nm) calculate joint torque 
         end
         
         
@@ -335,22 +325,25 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
 
         
         function state = createJointStateStruct(n_elem)
-            state.valve = zeros(n_elem,1);
-            state.p_musc = ones(n_elem,1)*101.325;
-            state.pdot_musc = zeros(n_elem,1);
-            state.m_musc = zeros(n_elem,1);
-            state.mdot_musc = zeros(n_elem,1);
-            state.rho_musc = zeros(n_elem,1);
-
+            % updateJointGeometry():
             state.linear_displace = zeros(n_elem,1);
-            state.ema = zeros(n_elem,1);
-
+            state.moment_arm = zeros(n_elem,1);
+            
+            % integrateMuscPres():
+            state.pdot_musc = zeros(n_elem,1);
+            state.mdot_musc = zeros(n_elem,1);
+            state.p_musc = ones(n_elem,1)*101.325;
+            state.m_musc = zeros(n_elem,1);
+            state.rho_musc = zeros(n_elem,1);
+            state.valve = zeros(n_elem,1);
+            % updateMtu():
             state.contract_musc_prev = zeros(n_elem,1);
             state.contract_musc = zeros(n_elem,1);
             state.vol_musc = zeros(n_elem,1);
             state.elong_tendon = zeros(n_elem,1);
             state.force_mtu = zeros(n_elem,1);
             
+            % updateJointTorque():
             state.torque = zeros(n_elem,1);
         end
         
