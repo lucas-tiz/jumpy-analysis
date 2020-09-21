@@ -42,8 +42,8 @@ t1/t2
 clc
 
 k_tendon = 500;
-pres = 100; % (kPa)
-disp = 0.5; % (cm)
+pres = 0; % (kPa)
+disp = -5; % (cm)
 
 psf = [force_sf.p30,...
    force_sf.p20, force_sf.p21,...
@@ -94,9 +94,9 @@ n = 1;
 for i = 1:length(cont_vec)
     for j = 1:length(pres_vec)
         pres = pres_vec(j);
-        
+                
         force_muscle = interpForce(cont_guess,pres);
-        force_spring = cont_guess*k_tendon + disp*k_tendon;
+        force_spring = max(0, (cont_guess+disp)*k_tendon);
     
         [err,idx] = min((force_muscle - force_spring).^2);
         err_vec(n) = err;
@@ -111,14 +111,39 @@ sqrt(val)
 sqrt(mean(err_vec))
 
 
-figure(31); clf; hold on; grid on;
-plot(cont_guess, interpForce(cont_guess,pres_vec(idx)))
-plot(cont_guess, cont_guess*k_tendon + disp*k_tendon)
-ylim([-10 700])
-
-
-
 %%
+% simple search test
+k_tendon = 500;
+pres = 0; % (kPa)
+disp = -5; % (cm)
+
+tic
+cont_guess = -1:0.01:8;
+err_vec = zeros(size(pres_vec));
+n = 1;
+for i = 1:length(cont_vec)
+    for j = 1:length(pres_vec)
+        pres = pres_vec(j);
+                
+        force_muscle = interpForce(cont_guess,pres);
+        force_spring = max(0, (cont_guess+disp)*k_tendon);
+    
+        [err,idx] = min((force_muscle - force_spring).^2);
+        err_vec(n) = err;
+        cont_musc_simple = cont_guess(idx);
+        
+        n = n + 1;
+    end
+end
+toc
+[val, idx] = max(err_vec);
+sqrt(val)
+sqrt(mean(err_vec))
+
+figure(31); clf; hold on; grid on;
+plot(cont_guess, force_muscle)
+plot(cont_guess, force_spring)
+ylim([-10 700])
 
 
 
