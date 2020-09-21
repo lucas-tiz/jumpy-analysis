@@ -195,33 +195,33 @@ if forceOptSens3D.plot == 1
         'Lower',[0, -100*ones(1,9)]);
     
     % fit max contraction border line
-%     pres = [0; testArr(1,:)']*6.89476; % (kPa)
-%     cont0 = [0; cont_final];
-%     cont = zeros(size(pres));
-%     
-%     for i = 1:length(pres)
-%         options = optimset('Display','iter');
-%         cont(i) = fminsearch(@(c) surfaceBoundaryObjFun(c, pres(i), sf), cont0(i), options);
-%     end
-% %     plot3(cont,pres, zeros(size(cont)), 'Marker', '.', 'LineStyle', 'none',...
-% %         'MarkerSize', 30, 'Color', 'r')
-%     
-% %     max_cont_fit = fit(pres, cont, 'poly3');
-% 
-%     fo = fitoptions('Method','NonlinearLeastSquares',...
-%                'Lower',[-100, 0.01, 0.01, -100, -100],...
-%                'Upper',[100, 100, 100, 100, 100],...
-%                'StartPoint',[0,1,1,1,1]);
-%     ft = fittype('a + b*log(x+c) + d*x + e*x^2', 'options',fo);
-%     [cf, cgof] = fit(pres, cont, ft)
-%     
-%     cf_mod = cf;
-%     cf_mod.a = cf.a - 0.5;
-%     
-%     pres_eval = 0:1:pres(end);
-% %     plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
-%     plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
-%         'Color', 'r')
+    pres = [0; testArr(1,:)']*6.89476; % (kPa)
+    cont0 = [0; cont_final];
+    cont = zeros(size(pres));
+    
+    for i = 1:length(pres)
+        options = optimset('Display','iter');
+        cont(i) = fminsearch(@(c) surfaceBoundaryObjFun(c, pres(i), sf), cont0(i), options);
+    end
+%     plot3(cont,pres, zeros(size(cont)), 'Marker', '.', 'LineStyle', 'none',...
+%         'MarkerSize', 30, 'Color', 'r')
+    
+%     max_cont_fit = fit(pres, cont, 'poly3');
+
+    fo = fitoptions('Method','NonlinearLeastSquares',...
+               'Lower',[-100, 0.01, 0.01, -100, -100],...
+               'Upper',[100, 100, 100, 100, 100],...
+               'StartPoint',[0,1,1,1,1]);
+    ft = fittype('a + b*log(x+c) + d*x + e*x^2', 'options',fo);
+    [cf, cgof] = fit(pres, cont, ft)
+    
+    cf_mod = cf;
+    cf_mod.a = cf.a - 0.5;
+    
+    pres_eval = 0:1:pres(end);
+%     plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
+    plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
+        'Color', 'r')
 
 
     
@@ -296,7 +296,7 @@ if forceOptSens3D.plot == 1
 end
 
 
-forceOptSens3D.save = 1;
+forceOptSens3D.save = 0;
 if forceOptSens3D.save == 1
     figPos = [-26 8 6 5];
     pub_figureFormat(f7, 'CMU Serif')
@@ -446,29 +446,30 @@ scatter3(dataArr(:,1),dataArr(:,2),dataArr(:,3))
 %% Interp stuff 2
 k_elong = 200; % (N/cm)
 
-cont_lims = [-1,8]; % (cm)
+% cont_lims = [-1,8]; % (cm)
 cont_vec = (-1:0.5:8)'; % (cm)
 pres_vec = ([-5, 0, testArr(1,:), 60]*6.89476)'; % (kPa)
 
 [X,Y] = meshgrid(cont_vec, pres_vec);
 Z = zeros(size(X)); % (N) force
 
+f_outside = 0;
 
 dataCell = {};
 % add negative pressure data
-cont = 0:1:4;
+cont = (0:1:4)';
 pres = pres_vec(1)*ones(size(cont));
-force = zeros(size(cont));
+force = [0; ones(length(cont)-1,1)*f_outside];
 dataCell{1} = [cont, pres, force];
 
 % add zero pressure data
-cont = 0:1:4;
+cont = (0:1:4)';
 pres = pres_vec(2)*ones(size(cont));
-force = zeros(size(cont));
+force = [0; ones(length(cont)-1,1)*f_outside];
 dataCell{2} = [cont, pres, force];
 
 % add test data
-for i = (1:length(dataCellArr))
+for i = 1:length(dataCellArr)
     mcu = dataCellArr{i}{1}; % MCU data
     ins = dataCellArr{i}{2}; % Instron data
     
@@ -480,7 +481,7 @@ for i = (1:length(dataCellArr))
 end
 
 % add large pressure data (constant)
-dataCell{13} = dataCell{12};
+dataCell{i+3} = dataCell{i+2};
 
 % add negative contraction and large contraction data
 dataArr = [];
@@ -494,7 +495,11 @@ for i = 1:length(dataCell)
     cont_post = cont_vec(cont_vec > cont(end));
     
     cont = [cont_pre; cont; cont_post];
-    force = [force(1) - k_elong*cont_pre; force; zeros(size(cont_post))];
+    if i > 2
+        force = [force(1) - k_elong*cont_pre; force; 0; ones(length(cont_post)-1,1)*f_outside];
+    else
+        force = [force(1) - k_elong*cont_pre; force; ones(length(cont_post),1)*f_outside];
+    end
     
     cont_grid = cont_vec;
     pres_grid = pres_vec(i)*ones(size(cont_vec));
@@ -504,22 +509,24 @@ for i = 1:length(dataCell)
     dataArrGrid = [dataArrGrid; cont_grid, pres_grid, force_grid];
 end
 
-
+% fix contraction = 0 & pres = 0 data point
+% dataArrGrid((dataArrGrid(:,1)) == 0 & (dataArrGrid(:,2)) == 0, 3) = 0;
+% Z((X == 0) & (Y == 0)) = 0;
 
 % save('force_makima_interp_data.mat', 'X','Y','Z')
 
 
 % interp2 surface
-[Xint,Yint] = meshgrid(-2:0.1:12, 0:10:500);
+[Xint,Yint] = meshgrid(-1:0.1:8, 0:10:500);
 
-Zint = interp2(X, Y, Z, Xint, Yint, 'makima');
+Zint = interp2(X, Y, Z, Xint, Yint, 'pchip');
 
 
 f8 = figure(8); clf
 hold on
 grid on
 xlabel('Contraction (cm)')
-ylabel('Pressure (psi)')
+ylabel('Pressure (kPa)')
 zlabel('Force (N)')
 xlim([-2,12]) %xlim([0,8.0])
 ylim([0 500])
@@ -537,11 +544,26 @@ scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3), 200, '.',...
 
 colormap copper
 caxis([0 150])
-surf(Xint,Yint,Zint, 'EdgeColor','k','FaceAlpha',0.5);
+% surf(Xint,Yint,Zint, 'EdgeColor','none','FaceAlpha',0.5);
 
 
+% show zero-force line
+y_min = (0:1:500)';
+x_min = zeros(length(y_min),1);
+z_min = zeros(length(y_min),1);
+for i = 1:length(y_min)
+    y = y_min(i);
+    x_vec = 0:0.01:8;
+    z_vec = interp2(X, Y, Z, x_vec, y, 'makima');
+    
+    idx = find(z_vec<1.0, 1, 'first');
+    x_min(i) = x_vec(idx);
+    z_min(i) = z_vec(idx);
+end
+scatter3(x_min,y_min,z_min, '.g')
 
-forceOptSens3D.save = 1;
+
+forceOptSens3D.save = 0;
 if forceOptSens3D.save == 1
     figPos = [-26 2 6 5];
     pub_figureFormat(f8, 'CMU Serif')
@@ -553,6 +575,132 @@ if forceOptSens3D.save == 1
 %     export_fig 'force_interp_global.png' -transparent -r600
 
 end
+
+
+%% Interp stuff 3
+k_elong = 200; % (N/cm)
+
+cont_vec = (-1:0.5:8)'; % (cm)
+pres_vec = ([-5, 0, testArr(1,:), 60]*6.89476)'; % (kPa)
+
+[X,Y] = meshgrid(cont_vec, pres_vec);
+Z = zeros(size(X)); % (N) force
+
+
+dataCell = {};
+% add negative pressure data
+cont = 0; %(0:1:4)';
+pres = pres_vec(1)*ones(size(cont));
+force = zeros(length(cont),1);
+dataCell{1} = [cont, pres, force];
+
+% add zero pressure data
+cont = 0; %(0:1:4)';
+pres = pres_vec(2)*ones(size(cont));
+force = zeros(length(cont),1);
+dataCell{2} = [cont, pres, force];
+
+% add test data
+for i = 1:length(dataCellArr)
+    mcu = dataCellArr{i}{1}; % MCU data
+    ins = dataCellArr{i}{2}; % Instron data
+    
+    cont = ins.len;
+    pres = mcu.presInterp;
+    force = ins.force;
+    
+    dataCell{i+2} = [cont, pres, force];
+end
+
+% add large pressure data (constant)
+dataCell{i+3} = dataCell{i+2};
+
+% add negative contraction and large contraction data
+dataArr = [];
+dataArrGrid = [];
+for i = 1:length(dataCell)
+    cont = dataCell{i}(:,1);
+    pres = dataCell{i}(:,2);
+    force = dataCell{i}(:,3);
+        
+    cont_pre = cont_vec(cont_vec < 0);
+    cont_post = cont_vec(cont_vec > cont(end));
+    cont = [cont_pre; cont; cont_post];
+    
+    force = [force(1) - k_elong*cont_pre; force; min(-1, sf(cont_post,pres_vec(i)))];
+%     force(force < 0) = 0; % remove negative forces
+
+    cont_grid = cont_vec;
+    pres_grid = pres_vec(i)*ones(size(cont_vec));
+    force_grid = interp1(cont, force, cont_vec, 'makima');
+    Z(i,:) = force_grid;
+    
+    dataArrGrid = [dataArrGrid; cont_grid, pres_grid, force_grid];
+end
+
+% save('force_makima_interp_data.mat', 'X','Y','Z')
+
+
+% interp2 surface
+[Xint,Yint] = meshgrid(-1:0.1:8, 0:10:500);
+
+Zint = interp2(X, Y, Z, Xint, Yint, 'makima');
+
+
+f8 = figure(8); clf
+hold on
+grid on
+xlabel('Contraction (cm)')
+ylabel('Pressure (kPa)')
+zlabel('Force (N)')
+xlim([-2,12]) %xlim([0,8.0])
+ylim([0 500])
+zlim([0 1000]) %zlim([0 700])
+view(135,35) % (135, 45)
+% surf(X,Y,Z)
+% scatter3(Xs,Ys,Zs)
+% scatter3(dataArr(:,1),dataArr(:,2),dataArr(:,3))
+
+
+colors = get(gca, 'ColorOrder');
+scatter3(dataArrGrid(:,1),dataArrGrid(:,2),dataArrGrid(:,3), 200, '.',...
+    'MarkerEdgeColor', colors(2,:))
+
+
+colormap copper
+caxis([0 150])
+surf(Xint,Yint,Zint, 'EdgeColor','none','FaceAlpha',0.5);
+
+
+% show zero-force line
+y_min = (0:1:500)';
+x_min = zeros(length(y_min),1);
+z_min = zeros(length(y_min),1);
+for i = 1:length(y_min)
+    y = y_min(i);
+    x_vec = 0:0.01:8;
+    z_vec = interp2(X, Y, Z, x_vec, y, 'makima');
+    
+    idx = find(z_vec<=0.1, 1, 'first');
+    x_min(i) = x_vec(idx);
+    z_min(i) = z_vec(idx);
+end
+scatter3(x_min,y_min,z_min, '.g')
+
+
+forceOptSens3D.save = 0;
+if forceOptSens3D.save == 1
+    figPos = [-26 2 6 5];
+    pub_figureFormat(f8, 'CMU Serif')
+    f8.PaperUnits = 'inches';
+    f8.PaperPosition = figPos;
+    f8.Units = 'inches';
+    f8.Position = figPos;
+%     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
+%     export_fig 'force_interp_global.png' -transparent -r600
+
+end
+
 
 %% Sigmoid stuff
 % clear, clc
