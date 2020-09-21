@@ -22,7 +22,7 @@ function updateJointGeometry(obj, theta, theta0)
         'linear', 'extrap'); 
     l_disp = interp1(beta_vec, linear_displace_vec,... % calculate displacement from initial angle to current angle
         beta, 'linear', 'extrap');
-    obj.state.linear_displace = l_disp - l_disp0; % switch sign so that positive joint disp corresponds to negative MTU disp 
+    obj.state.linear_displace = l_disp - l_disp0; % switch sign so that inc joint disp corresponds to dec MTU disp 
 end 
 
 
