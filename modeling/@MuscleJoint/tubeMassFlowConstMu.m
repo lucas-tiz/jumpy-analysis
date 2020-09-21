@@ -28,7 +28,7 @@ function mdot_tube = tubeMassFlowConstMu(obj, p1, p2) %, l_tube, d_tube, eps_tub
 % %     toc
 
     %TODO: tune grid resolution or use better binary search
-    mdot_vec = linspace(0,0.1,1000);
+    mdot_vec = linspace(0,0.1,10000);
     fD = (-1.8*log10((6.9*mu*pi*D)./(4*mdot_vec) + (eps/(3.7*D)).^1.11)).^(-2);
     mdot_dw = sqrt((p1^2-p2^2)*(D*k*s^2)./(fD*L));
     [~,idx] = min((mdot_vec - mdot_dw).^2);
