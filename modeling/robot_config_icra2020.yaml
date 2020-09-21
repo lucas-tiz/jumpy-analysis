@@ -19,9 +19,12 @@ hip: # hip joint parameters
 model: # overall robot model parameters
   joint_order: [knee_right, hip_right, hip_left, knee_left] # order of joints corresponding to below parameters
   joint_damp: [0.5, 0.5, 0.5, 0.5] # (N-m/rad/s) joint damping via antagonistic springs TODO: how to determine?
+  # joint_damp: [0.0, 0.0, 0.0, 0.0]
   joint_damp_lims: [0, 90, 90, 0]
   joint_stiff: [2.1, 2.1, 2.1, 2.1] # (Nm/rad) stiffness of antagonistic springs: 142.8x24.0 mm nylon strip
-  joint_stiff_lims:  [0, 90, 90, 0] # (deg) spring engagement starting angle TODO: adjust on robot
+  # joint_stiff: [2.1, 0.5, 0.5, 2.1] # (Nm/rad) stiffness of antagonistic springs: 142.8x24.0 mm nylon strip
+  joint_stiff_lims: [0, 90, 90, 0] # (deg) spring engagement starting angle TODO: adjust on robot
+  # joint_stiff_lims:  [0, 0, 0, 0] #[0, 90, 90, 0] # (deg) spring engagement starting angle TODO: adjust on robot
   mu: 0.999 # Coulomb foot friction coefficient TODO: how to determine?
 
 morphology: # robot morphology [shank_r, thigh_r, torso, thigh_l, shank_l]
