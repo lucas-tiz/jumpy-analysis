@@ -5,22 +5,23 @@ cam: # cam parameters (general parameters used for all 4 joints)
   beta_inc: 10 # (deg) joint angle (cam) increment for cam profile calculations
 
 knee: # knee joint parameters
-  rad0: 2.0 # (cm) cam radius at zero degrees
+  rad0: 4.0 # (cm) cam radius at zero degrees
   slope: 0 # (cm/rad) cam profile radius slope
   theta_range: [180, 0] # (deg) joint angle theta range over which to map cam angle beta from 0 to 180  
-  k_tendon: 100 # (N-cm) tendon stiffness TODO: characterize muscle mesh lead stiffness
+  # k_tendon: 100 # (N-cm) tendon stiffness # NOTE: not currently used
 
 hip: # hip joint parameters
-  rad0: 2.0
+  rad0: 4.0
   slope: 0
   theta_range: [-90, 90]
-  k_tendon: 100 # TODO: characterize muscle mesh lead stiffness
+  # k_tendon: 100 # NOTE: not currently used
 
 model: # overall robot model parameters
   joint_order: [knee_right, hip_right, hip_left, knee_left] # order of joints corresponding to below parameters
-  joint_damp: [0.5, 0.5, 0.5, 0.5] # (N-m/rad/s) joint damping via antagonistic springs TODO: how to determine?
+  joint_damp: [0.01, 0.01, 0.01, 0.01] # (N-m/rad/s) joint damping via antagonistic springs TODO: how to determine?
   # joint_damp: [0.0, 0.0, 0.0, 0.0]
-  joint_damp_lims: [0, 90, 90, 0]
+  # joint_damp_lims: [0, 90, 90, 0]
+  joint_damp_lims: [180, -90, -90, 180]
   joint_stiff: [2.1, 2.1, 2.1, 2.1] # (Nm/rad) stiffness of antagonistic springs: 142.8x24.0 mm nylon strip
   # joint_stiff: [2.1, 0.5, 0.5, 2.1] # (Nm/rad) stiffness of antagonistic springs: 142.8x24.0 mm nylon strip
   joint_stiff_lims: [0, 90, 90, 0] # (deg) spring engagement starting angle TODO: adjust on robot
@@ -34,11 +35,11 @@ morphology: # robot morphology [shank_r, thigh_r, torso, thigh_l, shank_l]
   # J: 1/12*m*(3*r_cyl^2 + l^2); # (kg/m^2) # cylinder inertia formula
 
 state0: # initial robot state
-  q0: [0, 158, -60, -60, 158] # TODO: change based on design optimization
+  q0: [0, 155, -60, -60, 155] # TODO: change based on design optimization
   qd0: [0, 0, 0, 0, 0]  # (rad/s) [angle 1, knee_r, hip_r, hip_l, knee_l] initial joint velocities
 
 control: # control parameters [knee_r, hip_r, hip_l, knee_l]
-  p_max: 206 # (gauge kPa) (30 psi) max muscle pressure TODO: set back to 35 psi for testing?
+  p_max: 206 # (gauge kPa) (30 psi) max muscle pressure TODO: set back to 35 psi (241 kPa) for testing?
   t_musc_activate: [0.0, 0.0, 0.0, 0.0] # (sec) muscle activation timings
 
 pneumatic: # pneumatic system parameters
