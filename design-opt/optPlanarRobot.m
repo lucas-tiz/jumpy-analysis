@@ -4,8 +4,6 @@
 
 *normalize inputs
 
-update leg masses to reflect measurements + maybe add artificial torso
-    weight
 adjust leg mass based on leg length
 
 check speed of simulation calcs
@@ -52,47 +50,35 @@ export_fname = 'TEST'; % name prefix for export files
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
-opt_param.k_tendon_hip = linspace(10, 3000, 10); % (N-cm) %DEBUG
-opt_param.k_tendon_knee = linspace(10, 3000, 10); % (N-cm) %DEBUG
-opt_param.l_shank = 0.25:0.1:0.55; % (m)
-opt_param.l_thigh = 0.25:0.1:0.55; % (m)
-opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
-opt_param.rad_knee = -3:0.1:6; %0:1:6; % (cm)
-opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
-opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
-opt_param.t_hip = -0.3:0.1:0.3; % (s)
-% opt_param.t_knee = 0.0:0.1:0.5; % (s)
-opt_param.theta0_hip = -90:10:90; % (deg)
-opt_param.theta0_knee = 0:10:180; % (deg)
-opt_type = 2;
-% rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
-rng('shuffle');
+% opt_param.k_tendon_hip = linspace(10, 3000, 10); % (N-cm) %DEBUG
+% opt_param.k_tendon_knee = linspace(10, 3000, 10); % (N-cm) %DEBUG
+% opt_param.l_shank = 0.25:0.1:0.55; % (m)
+% opt_param.l_thigh = 0.25:0.1:0.55; % (m)
+% opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
+% opt_param.rad_knee = -3:0.1:6; %0:1:6; % (cm)
+% opt_param.slope_hip = -1:0.1:4; %-4:1:4; % (cm/rad)
+% opt_param.slope_knee = -1:0.1:4; %-4:1:4; % (cm/rad)
+% opt_param.t_hip = -0.3:0.1:0.3; % (s)
+% % opt_param.t_knee = 0.0:0.1:0.5; % (s)
+% opt_param.theta0_hip = -90:10:90; % (deg)
+% opt_param.theta0_knee = 0:10:180; % (deg)
+% opt_type = 2;
+% % rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
+% rng('shuffle');
 
 											
-opt_param.k_tendon_hip = 10; %100; %0.8009; %37.53;
-opt_param.k_tendon_knee = 2720.45; %100;%0.10; %1.9989; %61.65;
-opt_param.l_shank = 0.55; %0.55; %0.55;
-opt_param.l_thigh = 0.35; %0.55; %0.25:0.1:0.55;
-opt_param.rad_hip = -1.92; %4; %4.80;
-opt_param.rad_knee = 6; %4; %3.40;
-opt_param.slope_hip = 3.00; %0; %-0.60;
-opt_param.slope_knee = 1.48; %0; %-0.90;
-opt_param.t_hip = 0.20; %0.0;%0.26; %0.29;
-opt_param.t_knee = 0.0;%0.35; %0.27;
-opt_param.theta0_hip = 38.01; %-60;
-opt_param.theta0_knee = 115.88; %158;
 % opt_param.k_tendon_hip = 100; %0.8009; %37.53;
 % opt_param.k_tendon_knee = 100;%0.10; %1.9989; %61.65;
-% opt_param.l_shank = 0.55; %0.55;
-% opt_param.l_thigh = 0.55; %0.25:0.1:0.55;
-% opt_param.rad_hip = 4; %4.80;
-% opt_param.rad_knee = 4; %3.40;
-% opt_param.slope_hip = 0; %-0.60;
-% opt_param.slope_knee = 0; %-0.90;
-% opt_param.t_hip = 0.0;%0.26; %0.29;
-% opt_param.t_knee = 0.0;%0.35; %0.27;
-% opt_param.theta0_hip = -60;
-% opt_param.theta0_knee = 158;
+opt_param.l_shank = 0.55;
+opt_param.l_thigh = 0.55;
+opt_param.rad_hip = 4;
+opt_param.rad_knee = 4;
+opt_param.slope_hip = 0;
+opt_param.slope_knee = 0;
+opt_param.t_hip = 0.0;
+% opt_param.t_knee = 0.0;
+opt_param.theta0_hip = -60;
+opt_param.theta0_knee = 158;
 opt_type = 1;
 
 % simulation parameters for design optimization
@@ -282,6 +268,7 @@ vid.file = [datetime_opt_start, ' - ', export_fname, ' anim']; %'anim_export_tes
 dt = robot.sim_param.dt*5;
 % anim_delay = 0.05;
 robot.animTrajectory(dt,anim_delay,21,vid,[0 robot.sim_param.t_sim]);
+
 
 
 % robot.animTrajectory(dt,anim_delay,16,vid,[0.15 0.35]);
