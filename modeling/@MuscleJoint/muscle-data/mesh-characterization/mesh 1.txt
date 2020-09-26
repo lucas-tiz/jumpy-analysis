@@ -1,0 +1,3 @@
+specimen 1 preloaded by ~2.5 N
+
+specimen 2 preloaded by ~2.5 N, clamps added, then force balanced
