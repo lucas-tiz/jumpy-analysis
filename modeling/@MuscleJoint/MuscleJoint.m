@@ -147,9 +147,11 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
             end
             
             % Calculate muscle volume
+            min_vol = obj.musc_vol_curvefit(0); % min musc vol (shouldn't change w/ neg contract)
+            vol_musc = max(min_vol, obj.musc_vol_curvefit(cont_musc))*1e-6; % (mL to m^3) muscle vol from curvefit
+            
             l_tube = obj.pneu_param.l_tube_valve_musc*0.0254; % (in to m) tube length
             d_tube = obj.pneu_param.d_tube_valve_musc*0.0254; % (in to m) tube inner diameter
-            vol_musc = obj.musc_vol_curvefit(cont_musc)*1e-6; % (mL to m^3) muscle vol from curvefit
             vol_musc = vol_musc + l_tube*pi*(d_tube/2)^2; % (m^3) add tubing volume to muscle TODO: is this right?           
         end
         
