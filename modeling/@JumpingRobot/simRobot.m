@@ -44,7 +44,7 @@ function simRobot(obj)
     % simulate over time vector
     for idx_t = 2:length(obj.sim_data.t)
 %         fprintf('t: %f\n', obj.sim_data.t(idx_t)) %DEBUG
-%         if obj.sim_data.t(idx_t) >= 0.2 %DEBUG
+%         if obj.sim_data.t(idx_t) >= 0.095 %DEBUG
 %             fprintf('pause')
 %         end
 
