@@ -246,6 +246,8 @@ classdef OptDesign %< matlab.mixin.Copyable
         %% Helper functions
         function  updateOptParams(obj, robot, param_vec)
             % Update robot with optimization parameter vector
+            % NOTE: currently not using tendons; using only t_hip as timing
+            % parameter
 
             % convert sweep vector back to 'opt_param' struct
             op = struct(); % initialize
@@ -254,9 +256,9 @@ classdef OptDesign %< matlab.mixin.Copyable
             end
 
             % if hip params not set, use knee params
-            if isnan(op.k_tendon_hip)
-                op.k_tendon_hip = op.k_tendon_knee;
-            end
+%             if isnan(op.k_tendon_hip)
+%                 op.k_tendon_hip = op.k_tendon_knee;
+%             end
             if isnan(op.rad_hip)
                 op.rad_hip = op.rad_knee;
             end
@@ -270,8 +272,8 @@ classdef OptDesign %< matlab.mixin.Copyable
             config.control.t_musc_activate = t_musc_activate - min(t_musc_activate);
 %             config.control.t_musc_activate = [op.t_knee, op.t_hip, op.t_hip, op.t_knee];    
             
-            config.knee.k_tendon = op.k_tendon_knee;
-            config.hip.k_tendon = op.k_tendon_hip; 
+%             config.knee.k_tendon = op.k_tendon_knee;
+%             config.hip.k_tendon = op.k_tendon_hip; 
             config.knee.rad0 = op.rad_knee;
             config.hip.rad0 = op.rad_hip;
             config.knee.slope = op.slope_knee;
