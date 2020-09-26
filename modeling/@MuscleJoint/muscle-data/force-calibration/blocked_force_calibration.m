@@ -578,9 +578,13 @@ end
 
 
 %% Interp stuff 3
-k_elong = 200; % (N/cm)
+file_mesh_cfit = ['C:\Users\Lucas\Documents\git\jumpy-analysis\modeling\'...
+    '@MuscleJoint\muscle-data\mesh-characterization\muscle_stiffness.mat'];
+mat = load(file_mesh_cfit, 'cfit');
+cfit_muscle = mat.cfit;
+% k_elong = 200; % (N/cm)
 
-cont_vec = (-1:0.5:8)'; % (cm)
+cont_vec = (-2:0.5:8)'; % (cm)
 pres_vec = ([-5, 0, testArr(1,:), 60]*6.89476)'; % (kPa)
 
 [X,Y] = meshgrid(cont_vec, pres_vec);
@@ -627,7 +631,26 @@ for i = 1:length(dataCell)
     cont_post = cont_vec(cont_vec > cont(end));
     cont = [cont_pre; cont; cont_post];
     
-    force = [force(1) - k_elong*cont_pre; force; min(-1, sf(cont_post,pres_vec(i)))];
+    
+    % calculate position along mesh stiffness curve
+    if force(1) < cfit_muscle(0)
+        cont_mesh = 0;
+    else
+        p = [cfit_muscle.p1, cfit_muscle.p2, cfit_muscle.p3,...
+            cfit_muscle.p4, (cfit_muscle.p5 - force(1))];
+        r = roots(p);
+        r_real = [];
+        for k = 1:4
+            if isreal(r(k))
+                r_real = [r_real, r(k)];
+            end
+        end
+            
+        cont_mesh = max(r_real);
+    end
+    
+    force = [cfit_muscle(cont_mesh + -cont_pre); force; min(-1, sf(cont_post,pres_vec(i)))];
+%     force = [force(1) - k_elong*cont_pre; force; min(-1, sf(cont_post,pres_vec(i)))];
 %     force(force < 0) = 0; % remove negative forces
 
     cont_grid = cont_vec;
@@ -642,7 +665,7 @@ end
 
 
 % interp2 surface
-[Xint,Yint] = meshgrid(-1:0.1:8, 0:10:500);
+[Xint,Yint] = meshgrid(-2:0.1:8, 0:10:500);
 
 Zint = interp2(X, Y, Z, Xint, Yint, 'makima');
 
@@ -653,7 +676,7 @@ grid on
 xlabel('Contraction (cm)')
 ylabel('Pressure (kPa)')
 zlabel('Force (N)')
-xlim([-2,12]) %xlim([0,8.0])
+xlim([-2,10]) %xlim([0,8.0])
 ylim([0 500])
 zlim([0 1000]) %zlim([0 700])
 view(135,35) % (135, 45)
@@ -681,7 +704,7 @@ for i = 1:length(y_min)
     x_vec = 0:0.01:8;
     z_vec = interp2(X, Y, Z, x_vec, y, 'makima');
     
-    idx = find(z_vec<=0.1, 1, 'first');
+    idx = find(z_vec<=0., 1, 'first');
     x_min(i) = x_vec(idx);
     z_min(i) = z_vec(idx);
 end
