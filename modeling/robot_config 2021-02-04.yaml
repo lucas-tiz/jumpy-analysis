@@ -8,13 +8,13 @@ knee: # knee joint parameters
   rad0: 6.0 # (cm) cam radius at zero degrees
   slope: 1.9 # (cm/rad) cam profile radius slope
   theta_range: [180, 0] # (deg) joint angle theta range over which to map cam angle beta from 0 to 180  
-  k_tendon: 500 #82 # (N/cm) tendon stiffness # NOTE: not currently used; nonlinear mesh stiffness used instead
+  k_tendon: 100 #82 # (N/cm) tendon stiffness # NOTE: not currently used; nonlinear mesh stiffness used instead
 
 hip: # hip joint parameters
   rad0: 1.6
   slope: 3.9
   theta_range: [-90, 90]
-  k_tendon: 500 #82 # NOTE: not currently used; nonlinear mesh stiffness used instead
+  k_tendon: 100 #82 # NOTE: not currently used; nonlinear mesh stiffness used instead
 
 model: # overall robot model parameters
   joint_order: [knee_right, hip_right, hip_left, knee_left] # order of joints corresponding to below parameters
@@ -35,9 +35,9 @@ state0: # initial robot state
   qd0: [0, 0, 0, 0, 0]  # (rad/s) [angle 1, knee_r, hip_r, hip_l, knee_l] initial joint velocities
 
 control: # control parameters [knee_r, hip_r, hip_l, knee_l]
-  p_max: [220, 220, 220, 220] #241 # (gauge kPa) (35 psi) max muscle pressure
-  t_musc_activate: [0.02, 0.0, 0.0, 0.02] # (sec) muscle activation timings
-  t_musc_seal: [0.112054, 0.106954, 0.106954, 0.112054]
+  p_max: [241, 241, 241, 241] #241 # (gauge kPa) (35 psi) max muscle pressure
+  t_musc_activate: [0.0, 0.0, 0.0, 0.0] # (sec) muscle activation timings
+  t_musc_seal: [0.1, 0.1, 0.1, 0.1]
 
 pneumatic: # pneumatic system parameters
   gas: air # gas type
