@@ -32,7 +32,7 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
         calculateCamData(obj, sweep_arr);
         
         getMuscPresFromCurvefit(obj, t, robot);
-        integrateMuscPres(obj, t, robot);
+        integrateMuscPres(obj, t_valve, p_max, robot);
         mdot_out = fminconTubeMassFlow(obj, p1, p2, l_tube, d_tube,...
             eps_tube, n_tube_seg, gas_props);
         mdot_tube= tubeMassFlowConstMu(obj, p1, p2)
@@ -165,13 +165,13 @@ classdef MuscleJoint < matlab.mixin.Copyable % copyable handle class
 
         
         %% main method
-        function updateJointState(obj, theta0, theta, t_valve, robot)
+        function updateJointState(obj, theta0, theta, t_valve, p_max, robot)
             % Compute joint torque created by pneumatic actuator & cam
             % (initial joint angle, current joint angle,
             % time relative to valve open)
                 
             obj.updateJointGeometry(theta, theta0); % calculate moment arm & displacement
-            obj.integrateMuscPres(t_valve, robot); % integrate pressure in time
+            obj.integrateMuscPres(t_valve, p_max, robot); % integrate pressure in time
                 % includes obj.updateMtu()
             updateJointTorque(obj); % (Nm) calculate joint torque 
 
