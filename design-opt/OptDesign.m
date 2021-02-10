@@ -266,10 +266,19 @@ classdef OptDesign %< matlab.mixin.Copyable
                 op.slope_hip = op.slope_knee;
             end
 
+%             %TODO: could just set config = obj.config, but the following
+%             %avoids updating pneumatic params
+%             config.cam = robot.config.cam;
+%             config.knee = robot.config.knee;
+%             config.hip = robot.config.hip;
+%             config.morphology = robot.config.morphology;
+%             config.state0.q0 = robot.config.state0.q0;
+%             config.control.t_musc_activate = robot.config.control.t_musc_activate;
+            
             % convert 'opt_param' struct to 'config' struct
             % shift activation times so that first activation is at t=0
-            t_musc_activate = [0, op.t_hip, op.t_hip, 0]; 
-            config.control.t_musc_activate = t_musc_activate - min(t_musc_activate);
+%             t_musc_activate = [0, op.t_hip, op.t_hip, 0]; 
+%             config.control.t_musc_activate = t_musc_activate - min(t_musc_activate);
 %             config.control.t_musc_activate = [op.t_knee, op.t_hip, op.t_hip, op.t_knee];    
             
 %             config.knee.k_tendon = op.k_tendon_knee;
