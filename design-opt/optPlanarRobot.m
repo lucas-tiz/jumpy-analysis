@@ -142,10 +142,10 @@ optimizer = OptDesign(robot, opt_param, export_param);
 % options.Display = 'iter';
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('sa', options);
 
-options.SwarmSize = 5000;
-options.MaxIter = 50;
-options.UseParallel = true;
-[param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
+% options.SwarmSize = 5000;
+% options.MaxIter = 50;
+% options.UseParallel = true;
+% [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
 
 %TODO:
 %{
