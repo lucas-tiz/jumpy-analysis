@@ -28,6 +28,9 @@ function simRobot(obj)
     aerial.state = 0; % 0=ground, 1=aerial
     
     % set values for t = 0 TODO: do for all initial values
+    obj.sim_data.m_source(1) = obj.state.m_source;
+    obj.sim_data.p_source(1) = obj.state.p_source;
+    
     obj.sim_data.x(1,:) = obj.state.x0;
     obj.sim_data.traj.pos_torso(1,:) = obj.torsoPos(obj.state.x0);
 
@@ -90,7 +93,7 @@ function simRobot(obj)
 
         % end sim if torso gets to ground
         obj.sim_data.traj.pos_torso(idx_t,:) = obj.torsoPos(x_plus);
-        if obj.sim_data.traj.pos_torso(idx_t,1) <= 0.0
+        if obj.sim_data.traj.pos_torso(idx_t,1) <= 0.12 % ~0.3 cm below starting torso height
             break
         end
         
