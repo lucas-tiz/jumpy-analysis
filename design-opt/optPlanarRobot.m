@@ -43,15 +43,17 @@ global fullfile_export_opt_params
 
 %% Parameters
 % file names
-config_fname = fullfile(repo_path, 'modeling', 'robot_config_icra2020.yaml');
+config_fname = fullfile(repo_path, 'modeling', 'robot_config 2021-02-04.yaml');
+% config_fname = ['C:\Users\Lucas\Dropbox (GaTech)\JumpingRobot\Experiments',...
+%     '\ICRA\1p5-jump 1\robot_config_icra2020.yaml'];
 export_path = '/Users/Lucas/Dropbox (GaTech)/Research/Hexapod/analysis/export'; %TODO: relative path?
-export_fname = 'TEST'; % name prefix for export files
+export_fname = ''; % name prefix for export files
 
 % optimization parameter sets
 opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 
-% opt_param.k_tendon_hip = linspace(10, 3000, 10); % (N-cm) %DEBUG
-% opt_param.k_tendon_knee = linspace(10, 3000, 10); % (N-cm) %DEBUG
+% % opt_param.k_tendon_hip = linspace(10, 3000, 10); % (N-cm)
+% % opt_param.k_tendon_knee = linspace(10, 3000, 10); % (N-cm)
 % opt_param.l_shank = 0.25:0.1:0.55; % (m)
 % opt_param.l_thigh = 0.25:0.1:0.55; % (m)
 % opt_param.rad_hip = -3:0.1:6; %0:1:6; % (cm)
@@ -66,19 +68,18 @@ opt_param_discrete = {'rad_hip', 'rad_knee', 'slope_hip', 'slope_knee'};
 % % rng(0, 'twister'); % 'twister' for repeatable or 'shuffle'
 % rng('shuffle');
 
-											
 % opt_param.k_tendon_hip = 100; %0.8009; %37.53;
 % opt_param.k_tendon_knee = 100;%0.10; %1.9989; %61.65;
-opt_param.l_shank = 0.55;
-opt_param.l_thigh = 0.55;
-opt_param.rad_hip = 4;
-opt_param.rad_knee = 4;
-opt_param.slope_hip = 0;
-opt_param.slope_knee = 0;
-opt_param.t_hip = 0.0;
-% opt_param.t_knee = 0.0;
-opt_param.theta0_hip = -60;
-opt_param.theta0_knee = 158;
+% opt_param.l_shank = 0.55;
+% opt_param.l_thigh = 0.55;
+opt_param.rad_hip = 1.6;
+opt_param.rad_knee = 6.0;
+opt_param.slope_hip = 3.9;
+opt_param.slope_knee = 1.9;
+% opt_param.t_hip = 0.0;
+% opt_param.t_knee = 0.02;
+% opt_param.theta0_hip = -149+90;
+% opt_param.theta0_knee = 161;
 opt_type = 1;
 
 % simulation parameters for design optimization
@@ -123,6 +124,11 @@ joint = MuscleJoint(robot.config.knee, robot.config.cam,...
     robot.config.pneumatic, robot.gas_props); % create dummy joint
 joint.calculateCamData(sweep_arr_joint); % update cam data
 
+fns = sort(fieldnames(robot.joints));
+for idx_fn = 1:numel(fns)
+    robot.joints.(fns{idx_fn}).load_cam_data()
+end
+
 
 %% Optimization
 optimizer = OptDesign(robot, opt_param, export_param);
@@ -136,21 +142,22 @@ optimizer = OptDesign(robot, opt_param, export_param);
 % options.Display = 'iter';
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('sa', options);
 
-% options.SwarmSize = 5;%2000;
-% options.MaxIter = 3;%100;
-% options.UseParallel = false;
-% [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
-
+options.SwarmSize = 5000;
+options.MaxIter = 50;
+options.UseParallel = true;
+[param_vec_optimal, vy_jump_opt]  = optimizer.optimize('swarm', options);
 
 %TODO:
 %{
 - change elite count
 - change crossover fraction
 - crossover function: heuristic? arithemtic? etc.
+- change selection function?
 %}
-% options.PopulationSize = 5;
-% options.MaxGenerations = 3;
-% options.EliteCount = 2;
+% options.PopulationSize = 2000;
+% options.MaxGenerations = 100;
+% options.EliteCount = ceil(0.05*options.PopulationSize); % (5% population size default) passed to next population
+% options.CrossoverFraction = 0.5; % (0.8 default) lower for more mutations
 % options.UseParallel = true;
 % [param_vec_optimal, vy_jump_opt]  = optimizer.optimize('ga', options);
 
@@ -235,7 +242,7 @@ end
 
 %% Simulate optimal config
 fprintf('\nsimulating optimal config\n')
-robot.sim_param.t_sim = 1;
+robot.sim_param.t_sim = 1.0;
 robot.sim_param.dt = 5e-4;
 robot.sim_param.liftoff_stop = 0;
 
