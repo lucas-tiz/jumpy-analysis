@@ -32,8 +32,9 @@ function updateMtu(obj, p_musc)
         
     force_musc_guess = max(0, interp2(force_data.X, force_data.Y, force_data.Z,...
         cont_guess, pres, 'makima'));
-    force_tendon_guess =  max(0,interp1(mesh_data.ext,...
-        mesh_data.force, (cont_guess+disp), 'makima'));
+%     force_tendon_guess =  max(0,interp1(mesh_data.ext,...
+%         mesh_data.force, (cont_guess+disp), 'makima')/4);
+    force_tendon_guess =  (cont_guess+disp)*obj.joint_param.k_tendon;
     %TODO: include series tendon with muscle (obj.joint_param.k_tendon)
             
     [~,idx] = min((force_musc_guess - force_tendon_guess).^2);
