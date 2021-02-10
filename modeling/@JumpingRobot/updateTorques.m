@@ -21,7 +21,8 @@ for idx_j = 1:4 % loop over index corresponding to actuated joint
     t_max = obj.config.control.t_musc_seal(idx_j); % valve close time
     
     %NOTE: use t_max instead of p_max for time-based control...
-    obj.joints.(joint_fn).updateJointState(ang0, ang_cur, t_valve, p_max, obj); 
+    obj.joints.(joint_fn).updateJointState(ang0, ang_cur, t_valve, t_max,...
+        p_max, obj); 
     tau_muscle = sign_tau(idx_j)*obj.joints.(joint_fn).state.torque;
     
     % spring torque

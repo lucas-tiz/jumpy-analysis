@@ -1,4 +1,4 @@
-function integrateMuscPres(obj, t, p_max, robot)
+function integrateMuscPres(obj, t, t_max, p_max, robot)
     % Iteratively integrate muscle pressure & update muscle contraction
     % together
 
@@ -28,10 +28,8 @@ function integrateMuscPres(obj, t, p_max, robot)
             rho_musc = interp1(obj.gas_props.pres, obj.gas_props.rho, ...
                     p_musc*1e-3, 'makima')*1000; % (p: kPa to MPA) (rho: g/mL to kg/m^3) air density
 
-            % check if at control pressure
-%             if p_musc >= (robot.config.control.p_max + 101.325)
-%             if t >= p_max
-            if p_musc >= (p_max + 101.325)
+            % check if at max pressure or valve close time
+            if (p_musc >= (p_max + 101.325)) || (t >= t_max)
                 valve_state = 1;
             else
                 valve_state = 0;
