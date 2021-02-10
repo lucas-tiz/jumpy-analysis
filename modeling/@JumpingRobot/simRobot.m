@@ -93,7 +93,7 @@ function simRobot(obj)
 
         % end sim if torso gets to ground
         obj.sim_data.traj.pos_torso(idx_t,:) = obj.torsoPos(x_plus);
-        if obj.sim_data.traj.pos_torso(idx_t,1) <= 0.12 % ~0.3 cm below starting torso height
+        if obj.sim_data.traj.pos_torso(idx_t,1) <= 0.011 %NOTE: this should be just below starting torso height
             break
         end
         
