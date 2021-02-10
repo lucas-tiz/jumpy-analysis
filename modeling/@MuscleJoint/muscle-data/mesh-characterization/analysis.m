@@ -40,9 +40,9 @@ force_interp = [cfit_lin(-100 + cfit_lin.p2/cfit_lin.p1);
 % save data
 ext = ext_interp/10; % (mm to cm)
 force = force_interp;
-save('mesh_stiffness_data-20cm.mat', 'ext', 'force');
+% save('mesh_stiffness_data-20cm.mat', 'ext', 'force');
 force = force_interp/2;
-save('mesh_stiffness_data-40cm.mat', 'ext', 'force');
+% save('mesh_stiffness_data-40cm.mat', 'ext', 'force');
 
 
 
@@ -52,29 +52,34 @@ ext_vec = -20:0.1:100;
 figure(1); clf
 hold on
 grid on
-% plot(ext1(idx_lim1), force1(idx_lim1), 'LineWidth', 1.5)
-plot(ext_raw, force_raw, 'LineWidth', 1.5)
-% plot(ext2(idx_lim2), force2_series(idx_lim2), 'LineWidth', 1.5)
+idx_raw = ((ext_raw >= 0.65) & (ext_raw <= 6));
+plot(ext_raw(idx_raw)/10, force_raw(idx_raw), '.', 'MarkerSize', 10)
+plot(ext_raw(idx_raw)/10, force_raw(idx_raw)/2, '.', 'MarkerSize', 10)
+% plot(ext_raw/10, force_raw, '--', 'LineWidth', 1.5)
 
-% plot(ext_vec_lin + cfit_lin.p2/cfit_lin.p1, cfit_lin(ext_vec_lin), ':', 'LineWidth', 2)
+% plot(ext_interp/10, force_interp, '.', 'MarkerSize', 10)
+plot(ext_vec/10, interp1(ext_interp, force_interp, ext_vec, 'makima')/2, '--', 'LineWidth', 1.5)
 
-% plot(ext_vec, cfit(ext_vec), '--', 'LineWidth', 1.5)
-% 
-% plot(ext_vec, interp1([0; ext(idx_lim)], [0; force(idx_lim)], ext_vec, 'linear', 'extrap'))
-
-plot(ext_interp, force_interp, '.', 'MarkerSize', 10)
-plot(ext_vec, interp1(ext_interp, force_interp, ext_vec, 'makima'), '--', 'LineWidth', 1.5)
-% plot(ext_vec, interp1(ext_interp, force_interp, ext_vec, 'makima')/2, '--', 'LineWidth', 1.5)
 
 
 % plot(ext_vec, cfit_series(ext_vec), '--', 'LineWidth', 1.5)
 % plot(ext_vec, cfit(ext_vec)*1/2, ':', 'LineWidth', 1.5)
 % plot(ext_vec, 2*cfit(ext_vec), '--', 'LineWidth', 1.5)
-% xlim([0, 30])
-xlabel('Extension (mm)')
+xlim([-0.5, 1])
+xlabel('Extension (cm)')
 ylabel('Force (N)')
-% legend('Raw data 1', 'Raw data 2', 'Linear Fit (1 cm)', 'Location', 'NorthWest')
-legend('Raw data', 'Raw data series', 'Fit', 'Fit series')
+legend('Data', 'Interp')
+
+
+%% Mesh 2
+file = 'Specimen_RawData_2.csv';
+data = xlsread(fullfile(folder,file));
+
+ext_raw = data2(:,2) - data2(1,2);
+force_raw = data2(:,3);% + 2.5;
+
+plot(ext_raw/10, force_raw, '.', 'MarkerSize', 10)
+
 
 
 %% Muscle stiffness
@@ -97,7 +102,7 @@ idx_lim1 = (ext1 >= ext_lim_quad(1)) & (ext1 <= ext_lim_quad(2));
 
 [cfit,gof] = fit(ext1(idx_lim1), force1(idx_lim1), 'poly4');
 gof
-save('muscle_stiffness.mat', 'cfit');
+% save('muscle_stiffness.mat', 'cfit');
 
 ext_vec = 0:0.1:3;
 figure(1); clf
