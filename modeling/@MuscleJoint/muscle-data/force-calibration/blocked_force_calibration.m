@@ -106,26 +106,27 @@ dataCellArr0{1}{2}.force = dataCellArr0{1}{2}.force*0;
 
 
 %%
-forceOptens3D.plotView = 1; % 1=3D, 2=len, 3=pres
+forceOptens3D.plotView = 2; % 1=3D, 2=len, 3=pres
 
 if forceOptSens3D.plot == 1
     
     f7 = figure(7); clf
     hold on
     grid on
-    xlim([-4, 12]) %xlim([0,8.0])
-    ylim([0,500])
+    xlim([0, 7]) %xlim([-4,12])
+    ylim([0,400])
     zlim([0 700]) %zlim([0 700])
     set(f7, 'Units', 'Normalized');
     xlab = xlabel('Contraction (cm)');
     xlab.Units = 'Normalized';
     ylab = ylabel('Pressure (kPa)');
     ylab.Units = 'Normalized';
-    zlabel('Contraction Force (N)')
+    zlabel('Force (N)')
 
     switch forceOptens3D.plotView
         case 1
-            view(135,35) % (135, 45)
+%             view(135,35) % (135, 45)
+            view(45, 35)
             rot = 29.5;
 %             xlab.Rotation = rot;
 %             xlab.Position = [0.816,0.073,0];    
@@ -166,7 +167,7 @@ if forceOptSens3D.plot == 1
         
         cont_final(i) = ins.len(end);
 
-        legStr{i} = [num2str(presTest), ' psi'];
+        legStr{i} = [num2str(round(presTest*6.89476)), ' kPa'];
         
 %         csvwrite(fullfile(f.path,f.pre,'compiled data',[num2str(presTest),'psi.csv']),...
 %             [ins.len, mcu.presInterp, ins.force])
@@ -220,8 +221,8 @@ if forceOptSens3D.plot == 1
     
     pres_eval = 0:1:pres(end);
 %     plot3(cf(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 1.5)
-    plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
-        'Color', 'r')
+%     plot3(cf_mod(pres_eval), pres_eval, zeros(size(pres_eval)), 'LineWidth', 3,...
+%         'Color', 'r')
 
 
     
@@ -296,16 +297,17 @@ if forceOptSens3D.plot == 1
 end
 
 
-forceOptSens3D.save = 0;
+forceOptSens3D.save = 1;
 if forceOptSens3D.save == 1
-    figPos = [-26 8 6 5];
-    pub_figureFormat(f7, 'CMU Serif')
+    figPos = [-26 8 5 3.2]; % [-26 8 5 4]
+%     pub_figureFormat(f7, 'CMU Serif')
+    pub_figureFormat(f7)
     f7.PaperUnits = 'inches';
     f7.PaperPosition = figPos;
     f7.Units = 'inches';
     f7.Position = figPos;
 %     print(fullfile(f.path,f.pre,[figName, f.pre]), '-dpng', '-r600')
-%     export_fig 'force_vs_length.png' -transparent -r600
+    export_fig 'force-vs-length-short.png' -transparent -r600
 
 end
 
